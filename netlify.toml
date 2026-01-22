@@ -3,17 +3,8 @@
   command = "npm run build"
   publish = ".next"
 
-[functions]
-  included_files = ["node_modules/**"]
-
 [[plugins]]
   package = "@netlify/plugin-nextjs"
-
-# Ensure API routes are handled by Next.js
-[[redirects]]
-  from = "/api/*"
-  to = "/.netlify/functions/___netlify-handler"
-  status = 200
 
 [[headers]]
   for = "/*"
