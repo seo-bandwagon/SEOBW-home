@@ -47,7 +47,7 @@ export function PhoneResults({ data, query }: PhoneResultsProps) {
         <Phone className="mx-auto h-12 w-12 text-slate-600 mb-4" />
         <h3 className="text-lg font-medium text-white mb-2">No Results Found</h3>
         <p className="text-slate-400">
-          We couldn't find business information for phone number "{query}"
+          {"We couldn't find business information for phone number \""}{query}{"\""}
         </p>
         <p className="text-slate-500 text-sm mt-2">
           Try searching for the business name instead

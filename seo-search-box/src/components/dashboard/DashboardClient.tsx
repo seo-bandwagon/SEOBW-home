@@ -139,7 +139,7 @@ export function DashboardClient({
             Welcome back, {userName || "User"}
           </h1>
           <p className="text-slate-400 mt-1">
-            Here's an overview of your SEO research activity
+            {"Here's an overview of your SEO research activity"}
           </p>
         </div>
         <button

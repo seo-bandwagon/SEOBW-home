@@ -77,7 +77,7 @@ export function BusinessResults({ data, query }: BusinessResultsProps) {
         <Building2 className="mx-auto h-12 w-12 text-slate-600 mb-4" />
         <h3 className="text-lg font-medium text-white mb-2">No Business Found</h3>
         <p className="text-slate-400">
-          We couldn't find business information for "{query}"
+          {"We couldn't find business information for \""}{query}{"\""}
         </p>
       </div>
     );
