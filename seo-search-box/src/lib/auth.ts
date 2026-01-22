@@ -40,6 +40,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
   },
   trustHost: true,
+  debug: true,
 });
 
 // Extend the session type to include user id
