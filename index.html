@@ -455,13 +455,13 @@
             letter-spacing: 1px;
         }
 
-        /* TESTIMONIALS */
-        .testimonials {
+        /* CASE STUDIES / RESULTS */
+        .results {
             padding: 120px 40px;
             background: var(--navy);
         }
 
-        .testimonial-grid {
+        .results-grid {
             max-width: 1400px;
             margin: 0 auto;
             display: grid;
@@ -469,31 +469,120 @@
             gap: 40px;
         }
 
-        .testimonial {
-            background: rgba(245, 245, 245, 0.05);
-            padding: 50px;
-            border-left: 4px solid var(--pink);
+        .case-study {
+            background: rgba(245, 245, 245, 0.03);
+            border: 2px solid rgba(245, 55, 150, 0.2);
+            padding: 0;
+            overflow: hidden;
+            transition: all 0.3s ease;
         }
 
-        .testimonial-quote {
-            font-size: 1.25rem;
-            color: rgba(245, 245, 245, 0.95);
-            line-height: 1.8;
-            margin-bottom: 30px;
-            font-style: italic;
+        .case-study:hover {
+            border-color: var(--pink);
+            transform: translateY(-5px);
+            box-shadow: 0 10px 40px rgba(245, 55, 150, 0.15);
         }
 
-        .testimonial-author {
-            font-family: var(--font-heading);
-            font-size: 1.25rem;
+        .case-study-header {
+            background: rgba(245, 55, 150, 0.1);
+            padding: 30px 40px;
+            border-bottom: 2px solid rgba(245, 55, 150, 0.2);
+        }
+
+        .case-study-industry {
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
             color: var(--pink);
             letter-spacing: 2px;
-            margin-bottom: 5px;
+            text-transform: uppercase;
+            margin-bottom: 8px;
         }
 
-        .testimonial-role {
-            color: rgba(245, 245, 245, 0.6);
-            font-size: 1rem;
+        .case-study-title {
+            font-family: var(--font-heading);
+            font-size: 1.75rem;
+            color: var(--white);
+            letter-spacing: 2px;
+        }
+
+        .case-study-body {
+            padding: 40px;
+        }
+
+        .case-study-desc {
+            color: rgba(245, 245, 245, 0.8);
+            line-height: 1.8;
+            margin-bottom: 30px;
+            font-size: 1.05rem;
+        }
+
+        .case-study-metrics {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .metric-card {
+            background: rgba(245, 245, 245, 0.05);
+            padding: 20px;
+            text-align: center;
+            border: 1px solid rgba(245, 55, 150, 0.15);
+        }
+
+        .metric-label {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: rgba(245, 245, 245, 0.5);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+
+        .metric-value {
+            font-family: var(--font-heading);
+            font-size: 2.5rem;
+            color: var(--white);
+            letter-spacing: 1px;
+            line-height: 1;
+        }
+
+        .metric-change {
+            font-family: var(--font-mono);
+            font-size: 0.9rem;
+            color: #00cc88;
+            margin-top: 5px;
+        }
+
+        .case-study-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .case-study-tag {
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            color: var(--pink);
+            background: rgba(245, 55, 150, 0.1);
+            padding: 6px 14px;
+            letter-spacing: 1px;
+        }
+
+        .results-note {
+            max-width: 1400px;
+            margin: 50px auto 0;
+            text-align: center;
+        }
+
+        .results-note p {
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            color: rgba(245, 245, 245, 0.4);
+        }
+
+        .results-note strong {
+            color: var(--pink);
         }
 
         /* PRICING */
@@ -812,13 +901,18 @@
             }
 
             .services-grid,
-            .testimonial-grid,
+            .results-grid,
             .pricing-grid {
                 grid-template-columns: 1fr;
             }
 
-            .testimonial-grid {
-                grid-template-columns: 1fr;
+            .case-study-metrics {
+                grid-template-columns: 1fr 1fr;
+                gap: 10px;
+            }
+
+            .metric-value {
+                font-size: 2rem;
             }
 
             .stat-number {
@@ -856,6 +950,7 @@
             <a href="/" class="nav-logo">SEO BANDWAGON</a>
             <ul class="nav-links">
                 <li><a href="#services" class="nav-link">SERVICES</a></li>
+                <li><a href="#results" class="nav-link">RESULTS</a></li>
                 <li><a href="#pricing" class="nav-link">PRICING</a></li>
                 <li><a href="#faq" class="nav-link">FAQ</a></li>
                 <li><a href="/blog" class="nav-link">BLOG</a></li>
@@ -937,16 +1032,16 @@
         </div>
         <div class="stats-grid">
             <div class="stat">
-                <div class="stat-number">2010</div>
-                <div class="stat-label">FOUNDED IN SEATTLE</div>
+                <div class="stat-number">15+</div>
+                <div class="stat-label">YEARS IN SEO</div>
             </div>
             <div class="stat">
-                <div class="stat-number">47</div>
-                <div class="stat-label">POINT SEO AUDIT</div>
+                <div class="stat-number">10+</div>
+                <div class="stat-label">ACTIVE CLIENTS</div>
             </div>
             <div class="stat">
-                <div class="stat-number">50+</div>
-                <div class="stat-label">CITATION DIRECTORIES</div>
+                <div class="stat-number">47%</div>
+                <div class="stat-label">AVG TRAFFIC GROWTH</div>
             </div>
             <div class="stat">
                 <div class="stat-number">$0</div>
@@ -955,28 +1050,132 @@
         </div>
     </section>
 
-    <!-- TESTIMONIALS -->
-    <section class="testimonials">
+    <!-- RESULTS / CASE STUDIES -->
+    <section class="results" id="results">
         <div class="section-header">
-            <h2 class="section-title">WHAT PEOPLE SAY</h2>
-            <p class="section-subtitle">Real feedback from real businesses</p>
+            <h2 class="section-title">REAL RESULTS</h2>
+            <p class="section-subtitle">Actual client data from Google Search Console — not testimonials we made up</p>
         </div>
-        <div class="testimonial-grid">
-            <div class="testimonial">
-                <p class="testimonial-quote">"Finally found an SEO tool that shows me exactly what's broken without the enterprise sales pitch. Fixed 23 issues in one afternoon."</p>
-                <div class="testimonial-author">SARAH CHEN</div>
-                <div class="testimonial-role">Owner, Chen's Bakery Seattle</div>
+        <div class="results-grid">
+            <!-- Case Study 1: Family Law Firm -->
+            <div class="case-study">
+                <div class="case-study-header">
+                    <div class="case-study-industry">Legal / Family Law</div>
+                    <div class="case-study-title">FAMILY LAW FIRM — SEATTLE, WA</div>
+                </div>
+                <div class="case-study-body">
+                    <p class="case-study-desc">A multi-attorney family law practice struggling with organic visibility. We optimized their content strategy, improved technical SEO, and built out practice area pages targeting high-intent keywords.</p>
+                    <div class="case-study-metrics">
+                        <div class="metric-card">
+                            <div class="metric-label">Organic Clicks</div>
+                            <div class="metric-value">505</div>
+                            <div class="metric-change">↑ 47% year over year</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">Impressions</div>
+                            <div class="metric-value">4,815</div>
+                            <div class="metric-change">↑ 23% year over year</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">GMB Clicks</div>
+                            <div class="metric-value">163</div>
+                            <div class="metric-change">↑ 81% from Google Maps</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">Avg Position</div>
+                            <div class="metric-value">8.3</div>
+                            <div class="metric-change">↑ from 20.5 (page 1)</div>
+                        </div>
+                    </div>
+                    <div class="case-study-tags">
+                        <span class="case-study-tag">Content Strategy</span>
+                        <span class="case-study-tag">Technical SEO</span>
+                        <span class="case-study-tag">Local SEO</span>
+                        <span class="case-study-tag">Google Business Profile</span>
+                    </div>
+                </div>
             </div>
-            <div class="testimonial">
-                <p class="testimonial-quote">"Went from invisible on Google Maps to #2 in the local pack within 90 days. The citation monitoring alone is worth it."</p>
-                <div class="testimonial-author">MIKE RODRIGUEZ</div>
-                <div class="testimonial-role">Rodriguez Plumbing</div>
+
+            <!-- Case Study 2: Wellness Center -->
+            <div class="case-study">
+                <div class="case-study-header">
+                    <div class="case-study-industry">Health & Wellness</div>
+                    <div class="case-study-title">WELLNESS CENTER — PUGET SOUND, WA</div>
+                </div>
+                <div class="case-study-body">
+                    <p class="case-study-desc">An acupuncture and wellness practice with solid local reputation but almost zero organic search presence. We built service-specific landing pages, optimized for "near me" queries, and fixed critical technical issues.</p>
+                    <div class="case-study-metrics">
+                        <div class="metric-card">
+                            <div class="metric-label">Organic Clicks</div>
+                            <div class="metric-value">45</div>
+                            <div class="metric-change">↑ 96% year over year</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">Impressions</div>
+                            <div class="metric-value">1,822</div>
+                            <div class="metric-change">↑ 120% year over year</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">Keywords Ranking</div>
+                            <div class="metric-value">25+</div>
+                            <div class="metric-change">↑ from near zero visibility</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">Local Queries</div>
+                            <div class="metric-value">Top 5</div>
+                            <div class="metric-change">for "acupuncture [city]"</div>
+                        </div>
+                    </div>
+                    <div class="case-study-tags">
+                        <span class="case-study-tag">Local SEO</span>
+                        <span class="case-study-tag">Landing Pages</span>
+                        <span class="case-study-tag">"Near Me" Targeting</span>
+                        <span class="case-study-tag">Technical Fixes</span>
+                    </div>
+                </div>
             </div>
-            <div class="testimonial">
-                <p class="testimonial-quote">"We switched from Semrush to save money and honestly the local SEO features are better. No regrets."</p>
-                <div class="testimonial-author">ALEX KIM</div>
-                <div class="testimonial-role">Marketing Director, PNW Dental Group</div>
+
+            <!-- Case Study 3: Flooring Contractor -->
+            <div class="case-study">
+                <div class="case-study-header">
+                    <div class="case-study-industry">Home Services / Contractor</div>
+                    <div class="case-study-title">FLOORING CONTRACTOR — WESTERN WA</div>
+                </div>
+                <div class="case-study-body">
+                    <p class="case-study-desc">A hardwood flooring contractor with a new website and zero search presence. We built the site with SEO-first architecture, created city-specific service pages, and launched a content strategy targeting local search intent.</p>
+                    <div class="case-study-metrics">
+                        <div class="metric-card">
+                            <div class="metric-label">Organic Clicks</div>
+                            <div class="metric-value">70+</div>
+                            <div class="metric-change">↑ from 0 (new site)</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">Impressions</div>
+                            <div class="metric-value">4,936</div>
+                            <div class="metric-change">↑ from 0 in 3 months</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">Blog Posts</div>
+                            <div class="metric-value">Page 1</div>
+                            <div class="metric-change">ranking for how-to queries</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">City Pages</div>
+                            <div class="metric-value">Indexed</div>
+                            <div class="metric-change">all service areas live</div>
+                        </div>
+                    </div>
+                    <div class="case-study-tags">
+                        <span class="case-study-tag">New Site Build</span>
+                        <span class="case-study-tag">Content Strategy</span>
+                        <span class="case-study-tag">City Pages</span>
+                        <span class="case-study-tag">SEO Architecture</span>
+                    </div>
+                </div>
             </div>
+        </div>
+        <div class="results-note">
+            <p>All metrics from <strong>Google Search Console</strong> — verified, not estimated. Client names anonymized for privacy. Data compared Q4 2024 vs Q4 2025.</p>
         </div>
     </section>
 
@@ -1102,7 +1301,7 @@
                     <a href="/" class="footer-logo">SEO BANDWAGON</a>
                     <p class="footer-tagline">SEO without the corporate nonsense</p>
                     <p style="color: rgba(245, 245, 245, 0.7); line-height: 1.8;">
-                        Built in Port Townsend, WA since 2010. SEO tools for small businesses who want results, not meetings.
+                        Built in Washington State since 2010. SEO tools for small businesses who want results, not meetings.
                     </p>
                 </div>
                 <div class="footer-section">
@@ -1134,7 +1333,7 @@
                 </div>
             </div>
             <div class="footer-bottom">
-                <p>© 2026 SEO Bandwagon • Port Townsend, WA • <a href="/privacy" style="color: var(--pink);">Privacy</a> • <a href="/terms" style="color: var(--pink);">Terms</a></p>
+                <p>© 2026 SEO Bandwagon • Washington State • <a href="/privacy" style="color: var(--pink);">Privacy</a> • <a href="/terms" style="color: var(--pink);">Terms</a></p>
             </div>
         </div>
     </footer>
