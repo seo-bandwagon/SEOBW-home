@@ -9,7 +9,7 @@ SEO Bandwagon - A full-stack SEO intelligence platform providing unified search 
 - **Framework**: Next.js 14.2.21 (React 18.3.1)
 - **Language**: TypeScript 5.7.2
 - **Styling**: Tailwind CSS 3.4.17
-- **Database**: PostgreSQL (Neon serverless) via Drizzle ORM 0.38.3
+- **Database**: PostgreSQL (Supabase) via Drizzle ORM 0.38.3
 - **Authentication**: NextAuth 5.0.0-beta.25 (Google & GitHub OAuth)
 - **Caching**: Redis 4.7.0 (optional, graceful fallback)
 - **SEO Data**: DataForSEO API
@@ -118,24 +118,85 @@ npm run db:push          # Push schema to database
 npm run db:studio        # Open Drizzle Studio
 ```
 
+## Architecture
+
+### Production (Hostinger VPS)
+
+Two PM2 processes behind Nginx:
+
+| Service | Domain | Port | Path on VPS |
+|---------|--------|------|-------------|
+| **Frontend** (Next.js) | `seobandwagon.dev` | 3001 | `/var/www/SEOBW-home/seo-search-box/` |
+| **MCP Server** (Express) | `api.seobandwagon.dev` | 3000 | `/var/www/seobandwagon-mcp/` |
+
+- Nginx configs: `seobandwagon-mcp/nginx/`
+- PM2 config: `seobandwagon-mcp/ecosystem.config.cjs`
+- Deploy script: `seobandwagon-mcp/deploy.sh`
+- SSL: Let's Encrypt via Certbot
+
+### Database
+
+**Supabase** (project ref: `rraubczrlpaushskzpfc`, region: us-west-2)
+- Direct host is **IPv6-only** (`db.rraubczrlpaushskzpfc.supabase.co`) — won't work on most hosts
+- Use the **connection pooler** (IPv4): `aws-0-us-west-2.pooler.supabase.com`
+- Session mode: port 5432 | Transaction mode: port 6543
+- Username format for pooler: `postgres.rraubczrlpaushskzpfc`
+
+### API Endpoints
+
+**Frontend** (`seobandwagon.dev`):
+- `/api/auth/*` — NextAuth (Google OAuth login)
+- `/api/search` — Main search endpoint
+- `/api/history`, `/api/analytics`, `/api/alerts`, `/api/saved-searches`
+
+**MCP Server** (`api.seobandwagon.dev`):
+- `/health` — Health check
+- `/auth/google?user_id=xxx` — GSC/GA4 OAuth flow
+- `/auth/google/callback` — OAuth callback
+- `/auth/status?user_id=xxx` — Token status
+- MCP SSE endpoints for Claude Code integration
+
+### Google Cloud OAuth
+
+Two separate OAuth flows:
+1. **NextAuth** (frontend login): Callback at `https://seobandwagon.dev/api/auth/callback/google`
+2. **GSC/GA4 tokens** (MCP server): Callback at `https://api.seobandwagon.dev/auth/google/callback`
+
+Both use the same Google Cloud OAuth client.
+
 ## Environment Variables
+
+### Frontend (.env at seo-search-box/)
 
 **Required:**
 ```
-DATABASE_URL              # PostgreSQL connection string (Neon)
-AUTH_SECRET               # NextAuth secret
-AUTH_URL                  # Application URL for OAuth callbacks
+DATABASE_URL              # Supabase PostgreSQL (use pooler URL, not direct)
+AUTH_SECRET               # NextAuth secret (openssl rand -base64 32)
+AUTH_URL                  # https://seobandwagon.dev
 AUTH_GOOGLE_ID            # Google OAuth Client ID
 AUTH_GOOGLE_SECRET        # Google OAuth Client Secret
-AUTH_GITHUB_ID            # GitHub OAuth App ID
-AUTH_GITHUB_SECRET        # GitHub OAuth App Secret
 DATAFORSEO_LOGIN          # DataForSEO API login
 DATAFORSEO_PASSWORD       # DataForSEO API password
 ```
 
 **Optional:**
 ```
+AUTH_GITHUB_ID            # GitHub OAuth App ID
+AUTH_GITHUB_SECRET        # GitHub OAuth App Secret
 REDIS_URL                 # Redis connection for caching
+MCP_SERVER_URL            # https://api.seobandwagon.dev
+```
+
+### MCP Server (.env at seobandwagon-mcp/)
+
+```
+PORT                      # 3000
+NODE_ENV                  # production
+GOOGLE_CLIENT_ID          # Same Google OAuth Client ID
+GOOGLE_CLIENT_SECRET      # Same Google OAuth Client Secret
+GOOGLE_REDIRECT_URI       # https://api.seobandwagon.dev/auth/google/callback
+SUPABASE_URL              # https://rraubczrlpaushskzpfc.supabase.co
+SUPABASE_SERVICE_KEY      # Supabase service role key
 ```
 
 ## Caching Strategy (Redis TTLs)
