@@ -17,7 +17,8 @@ This application uses NextAuth v5 for OAuth authentication with Google and GitHu
 6. For Application type, select "Web application"
 7. Add authorized redirect URIs:
    - Development: `http://localhost:3000/api/auth/callback/google`
-   - Production: `https://seobandwagon.dev/api/auth/callback/google`
+   - Production: `https://YOUR-DOMAIN.com/api/auth/callback/google`
+     - Replace `YOUR-DOMAIN.com` with your actual production domain (e.g., `seobandwagon.dev`)
 8. Copy the Client ID and Client Secret
 
 ## GitHub OAuth Setup (Optional)
@@ -25,11 +26,12 @@ This application uses NextAuth v5 for OAuth authentication with Google and GitHu
 1. Go to [GitHub Developer Settings](https://github.com/settings/developers)
 2. Click "New OAuth App"
 3. Fill in the application details:
-   - Application name: SEO Bandwagon
-   - Homepage URL: `https://seobandwagon.dev` (or your domain)
+   - Application name: Your App Name (e.g., "SEO Bandwagon")
+   - Homepage URL: `https://YOUR-DOMAIN.com` (replace with your actual domain)
    - Authorization callback URL: 
      - Development: `http://localhost:3000/api/auth/callback/github`
-     - Production: `https://seobandwagon.dev/api/auth/callback/github`
+     - Production: `https://YOUR-DOMAIN.com/api/auth/callback/github`
+       - Replace `YOUR-DOMAIN.com` with your actual production domain
 4. Click "Register application"
 5. Copy the Client ID and generate a Client Secret
 
@@ -42,7 +44,7 @@ Copy `.env.example` to `.env.local` and fill in the following variables:
 AUTH_SECRET=your-secret-key-here
 
 # Required: Your application URL
-AUTH_URL=http://localhost:3000  # or https://seobandwagon.dev for production
+AUTH_URL=http://localhost:3000  # For production: https://YOUR-DOMAIN.com
 
 # Required: Google OAuth credentials
 AUTH_GOOGLE_ID=your-google-client-id
