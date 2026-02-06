@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thanks! Your Audit is On Its Way | SEO Bandwagon</title>
+    <meta name="robots" content="noindex, nofollow">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Grotesk:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --pink: #F53796;
+            --navy: #000022;
+            --white: #F5F5F5;
+            
+            --font-heading: 'Bebas Neue', sans-serif;
+            --font-body: 'Space Grotesk', sans-serif;
+            --font-mono: 'Space Mono', monospace;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-body);
+            background: var(--navy);
+            color: var(--white);
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* NAVIGATION */
+        .nav {
+            background: rgba(0, 0, 34, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 2px solid var(--pink);
+        }
+
+        .nav-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nav-logo {
+            font-family: var(--font-heading);
+            font-size: 2rem;
+            color: var(--white);
+            letter-spacing: 2px;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .nav-logo:hover {
+            color: var(--pink);
+        }
+
+        /* THANK YOU CONTENT */
+        .thank-you {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 80px 40px;
+            text-align: center;
+        }
+
+        .thank-you-container {
+            max-width: 700px;
+        }
+
+        .success-icon {
+            font-size: 6rem;
+            margin-bottom: 30px;
+            animation: bounce 0.6s ease-out;
+        }
+
+        @keyframes bounce {
+            0% { transform: scale(0); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+
+        .thank-you h1 {
+            font-family: var(--font-heading);
+            font-size: clamp(3rem, 8vw, 5rem);
+            color: var(--white);
+            letter-spacing: 4px;
+            margin-bottom: 25px;
+        }
+
+        .thank-you h1 .accent {
+            color: var(--pink);
+        }
+
+        .thank-you-text {
+            font-size: 1.35rem;
+            color: rgba(245, 245, 245, 0.9);
+            margin-bottom: 20px;
+            line-height: 1.8;
+        }
+
+        .next-steps {
+            background: rgba(245, 245, 245, 0.05);
+            border: 2px solid rgba(245, 55, 150, 0.3);
+            padding: 40px;
+            margin: 40px 0;
+            text-align: left;
+        }
+
+        .next-steps h2 {
+            font-family: var(--font-heading);
+            font-size: 1.75rem;
+            color: var(--pink);
+            letter-spacing: 2px;
+            margin-bottom: 20px;
+        }
+
+        .next-steps ul {
+            list-style: none;
+        }
+
+        .next-steps li {
+            padding: 12px 0;
+            color: rgba(245, 245, 245, 0.9);
+            font-size: 1.1rem;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .next-steps li::before {
+            content: "→";
+            color: var(--pink);
+            font-weight: bold;
+        }
+
+        .btn {
+            font-family: var(--font-heading);
+            font-size: 1.25rem;
+            letter-spacing: 2px;
+            padding: 18px 45px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-primary {
+            background: var(--pink);
+            color: var(--white);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 30px rgba(245, 55, 150, 0.5);
+        }
+
+        /* FOOTER */
+        .footer {
+            background: #000000;
+            padding: 30px 40px;
+            border-top: 2px solid var(--pink);
+            text-align: center;
+        }
+
+        .footer p {
+            color: rgba(245, 245, 245, 0.5);
+        }
+
+        .footer a {
+            color: var(--pink);
+        }
+
+        @media (max-width: 768px) {
+            .thank-you {
+                padding: 60px 20px;
+            }
+
+            .next-steps {
+                padding: 25px;
+            }
+
+            .success-icon {
+                font-size: 4rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- NAVIGATION -->
+    <nav class="nav">
+        <div class="nav-container">
+            <a href="/" class="nav-logo">SEO BANDWAGON</a>
+        </div>
+    </nav>
+
+    <!-- THANK YOU -->
+    <section class="thank-you">
+        <div class="thank-you-container">
+            <div class="success-icon">✅</div>
+            <h1>AUDIT <span class="accent">REQUESTED!</span></h1>
+            <p class="thank-you-text">Thanks for reaching out! We've received your request and will start analyzing your site right away.</p>
+            
+            <div class="next-steps">
+                <h2>WHAT HAPPENS NEXT</h2>
+                <ul>
+                    <li>We'll run a comprehensive 47-point technical audit on your site</li>
+                    <li>Analyze your local SEO presence and competitor landscape</li>
+                    <li>Identify your biggest opportunities for quick wins</li>
+                    <li>Email you a personalized report within 24 hours</li>
+                </ul>
+            </div>
+            
+            <p class="thank-you-text">While you wait, why not explore our SEO blog?</p>
+            <a href="/blog" class="btn btn-primary">READ THE BLOG</a>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <p>© 2026 SEO Bandwagon • Washington State • <a href="/privacy">Privacy</a> • <a href="/terms">Terms</a></p>
+    </footer>
+</body>
+</html>

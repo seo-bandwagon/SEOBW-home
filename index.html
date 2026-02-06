@@ -700,6 +700,21 @@
             color: var(--navy);
         }
 
+        /* Section CTAs */
+        .section-cta {
+            text-align: center;
+            margin-top: 60px;
+            padding-top: 40px;
+        }
+
+        .section-cta-text {
+            font-family: var(--font-heading);
+            font-size: 1.75rem;
+            color: var(--pink);
+            letter-spacing: 2px;
+            margin-bottom: 20px;
+        }
+
         /* FAQ */
         .faq {
             padding: 120px 40px;
@@ -863,6 +878,144 @@
             margin-bottom: 30px;
         }
 
+        /* LEAD CAPTURE FORM */
+        .lead-capture {
+            padding: 120px 40px;
+            background: linear-gradient(135deg, var(--navy) 0%, #000033 50%, var(--navy) 100%);
+            border-top: 4px solid var(--pink);
+        }
+
+        .lead-capture-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 80px;
+            align-items: center;
+        }
+
+        .lead-capture-content {
+            padding-right: 40px;
+        }
+
+        .lead-capture .section-title {
+            text-align: left;
+            margin-bottom: 25px;
+        }
+
+        .lead-capture-subtitle {
+            font-size: 1.35rem;
+            color: rgba(245, 245, 245, 0.9);
+            line-height: 1.8;
+            margin-bottom: 40px;
+        }
+
+        .lead-capture-benefits {
+            list-style: none;
+        }
+
+        .lead-capture-benefits li {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 15px 0;
+            font-size: 1.2rem;
+            color: rgba(245, 245, 245, 0.9);
+            border-bottom: 1px solid rgba(245, 55, 150, 0.15);
+        }
+
+        .lead-capture-benefits li:last-child {
+            border-bottom: none;
+        }
+
+        .benefit-icon {
+            font-size: 1.5rem;
+        }
+
+        .lead-capture-form-wrapper {
+            background: rgba(245, 245, 245, 0.03);
+            border: 2px solid rgba(245, 55, 150, 0.4);
+            padding: 50px;
+            position: relative;
+        }
+
+        .lead-capture-form-wrapper::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(135deg, var(--pink), transparent, var(--pink));
+            opacity: 0.3;
+            z-index: -1;
+            filter: blur(20px);
+        }
+
+        .lead-form .form-group {
+            margin-bottom: 25px;
+        }
+
+        .lead-form label {
+            display: block;
+            font-family: var(--font-heading);
+            font-size: 1rem;
+            color: var(--pink);
+            letter-spacing: 2px;
+            margin-bottom: 10px;
+        }
+
+        .lead-form label .optional {
+            font-family: var(--font-body);
+            font-size: 0.8rem;
+            color: rgba(245, 245, 245, 0.4);
+            letter-spacing: 0;
+            text-transform: none;
+        }
+
+        .lead-form input,
+        .lead-form textarea {
+            width: 100%;
+            padding: 16px 20px;
+            font-family: var(--font-body);
+            font-size: 1rem;
+            background: rgba(0, 0, 34, 0.8);
+            border: 2px solid rgba(245, 55, 150, 0.2);
+            color: var(--white);
+            transition: all 0.3s ease;
+        }
+
+        .lead-form input:focus,
+        .lead-form textarea:focus {
+            outline: none;
+            border-color: var(--pink);
+            box-shadow: 0 0 20px rgba(245, 55, 150, 0.2);
+        }
+
+        .lead-form input::placeholder,
+        .lead-form textarea::placeholder {
+            color: rgba(245, 245, 245, 0.3);
+        }
+
+        .lead-form textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .form-submit {
+            width: 100%;
+            margin-top: 10px;
+            font-size: 1.5rem;
+            padding: 22px 45px;
+        }
+
+        .form-privacy {
+            text-align: center;
+            font-size: 0.9rem;
+            color: rgba(245, 245, 245, 0.5);
+            margin-top: 20px;
+        }
+
         /* RESPONSIVE */
         @media (max-width: 768px) {
             .nav-links {
@@ -918,6 +1071,37 @@
             .stat-number {
                 font-size: 3.5rem;
             }
+
+            .lead-capture {
+                padding: 80px 20px;
+            }
+
+            .lead-capture-container {
+                grid-template-columns: 1fr;
+                gap: 50px;
+            }
+
+            .lead-capture-content {
+                padding-right: 0;
+                text-align: center;
+            }
+
+            .lead-capture .section-title {
+                text-align: center;
+            }
+
+            .lead-capture-benefits li {
+                justify-content: center;
+            }
+
+            .lead-capture-form-wrapper {
+                padding: 30px 25px;
+            }
+
+            .form-submit {
+                font-size: 1.25rem;
+                padding: 18px 30px;
+            }
         }
 
         /* REDUCED MOTION */
@@ -955,7 +1139,7 @@
                 <li><a href="#faq" class="nav-link">FAQ</a></li>
                 <li><a href="/blog" class="nav-link">BLOG</a></li>
             </ul>
-            <a href="#scan" class="nav-cta">FREE AUDIT</a>
+            <a href="#free-audit" class="nav-cta">FREE AUDIT</a>
             <button class="nav-mobile-toggle" aria-label="Toggle menu">
                 <span></span>
                 <span></span>
@@ -1021,6 +1205,9 @@
                 <p class="service-text">47-point technical audit. Find broken links, missing tags, slow pages. Get a prioritized fix list with time estimates. WordPress automation available.</p>
                 <a href="/technical-seo" class="service-link">RUN AUDIT →</a>
             </div>
+        </div>
+        <div class="section-cta">
+            <a href="#free-audit" class="btn btn-primary">GET YOUR FREE AUDIT →</a>
         </div>
     </section>
 
@@ -1177,6 +1364,10 @@
         <div class="results-note">
             <p>All metrics from <strong>Google Search Console</strong> — verified, not estimated. Client names anonymized for privacy. Data compared Q4 2024 vs Q4 2025.</p>
         </div>
+        <div class="section-cta">
+            <p class="section-cta-text">Want results like these?</p>
+            <a href="#free-audit" class="btn btn-primary">GET YOUR FREE AUDIT →</a>
+        </div>
     </section>
 
     <!-- PRICING -->
@@ -1197,7 +1388,7 @@
                     <li>Weekly email reports</li>
                     <li>1 business location</li>
                 </ul>
-                <a href="#scan" class="btn btn-primary" style="width: 100%;">START FREE</a>
+                <a href="#free-audit" class="btn btn-primary" style="width: 100%;">START FREE</a>
             </div>
             <div class="pricing-card">
                 <span class="pricing-badge">POPULAR</span>
@@ -1224,7 +1415,7 @@
                     <li>Dedicated support</li>
                     <li>Custom development</li>
                 </ul>
-                <a href="/contact" class="btn btn-primary" style="width: 100%;">CONTACT US</a>
+                <a href="#free-audit" class="btn btn-primary" style="width: 100%;">CONTACT US</a>
             </div>
         </div>
     </section>
@@ -1284,12 +1475,58 @@
         </div>
     </section>
 
+    <!-- LEAD CAPTURE FORM -->
+    <section class="lead-capture" id="free-audit">
+        <div class="lead-capture-container">
+            <div class="lead-capture-content">
+                <h2 class="section-title">GET YOUR <span style="color: var(--pink);">FREE</span> SEO AUDIT</h2>
+                <p class="lead-capture-subtitle">We'll analyze your site and send you a personalized report with actionable fixes — no sales pitch, just data.</p>
+                <ul class="lead-capture-benefits">
+                    <li><span class="benefit-icon">📊</span> 47-point technical audit</li>
+                    <li><span class="benefit-icon">🎯</span> Competitor analysis</li>
+                    <li><span class="benefit-icon">📍</span> Local SEO opportunities</li>
+                    <li><span class="benefit-icon">⚡</span> Results in 24 hours</li>
+                </ul>
+            </div>
+            <div class="lead-capture-form-wrapper">
+                <form class="lead-form" name="seo-audit-request" method="POST" action="/thank-you" data-netlify="true" netlify-honeypot="bot-field">
+                    <input type="hidden" name="form-name" value="seo-audit-request">
+                    <p class="hidden-field" style="display:none;">
+                        <label>Don't fill this out if you're human: <input name="bot-field" /></label>
+                    </p>
+                    <div class="form-group">
+                        <label for="audit-name">YOUR NAME *</label>
+                        <input type="text" id="audit-name" name="name" required placeholder="Jane Smith">
+                    </div>
+                    <div class="form-group">
+                        <label for="audit-email">EMAIL ADDRESS *</label>
+                        <input type="email" id="audit-email" name="email" required placeholder="jane@company.com">
+                    </div>
+                    <div class="form-group">
+                        <label for="audit-website">WEBSITE URL *</label>
+                        <input type="url" id="audit-website" name="website" required placeholder="https://yoursite.com">
+                    </div>
+                    <div class="form-group">
+                        <label for="audit-phone">PHONE <span class="optional">(optional)</span></label>
+                        <input type="tel" id="audit-phone" name="phone" placeholder="(555) 123-4567">
+                    </div>
+                    <div class="form-group">
+                        <label for="audit-challenge">BIGGEST SEO CHALLENGE <span class="optional">(optional)</span></label>
+                        <textarea id="audit-challenge" name="challenge" rows="3" placeholder="Not ranking for target keywords, low traffic, local visibility..."></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary form-submit">GET MY FREE AUDIT</button>
+                    <p class="form-privacy">🔒 No spam. No sales calls. Just your audit.</p>
+                </form>
+            </div>
+        </div>
+    </section>
+
     <!-- CTA -->
     <section class="cta">
         <div class="cta-container">
             <h2>READY TO FIX YOUR SEO?</h2>
             <p class="cta-text">Free audit shows what's broken. Free rank tracking shows where you stand. No credit card required.</p>
-            <a href="#scan" class="btn btn-primary">SCAN YOUR SITE NOW</a>
+            <a href="#free-audit" class="btn btn-primary">GET YOUR FREE AUDIT</a>
         </div>
     </section>
 
