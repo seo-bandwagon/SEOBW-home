@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Bebas_Neue, Space_Grotesk, Space_Mono } from "next/font/google";
 import "./globals.css";
-import { SessionProvider } from "next-auth/react";
+import { SessionProviderWrapper } from "@/components/providers/SessionProviderWrapper";
 import { auth } from "@/lib/auth";
 
 const bebasNeue = Bebas_Neue({
@@ -43,9 +43,9 @@ export default async function RootLayout({
   return (
     <html lang="en">
       <body className={`${bebasNeue.variable} ${spaceGrotesk.variable} ${spaceMono.variable} font-body`}>
-        <SessionProvider session={session}>
+        <SessionProviderWrapper session={session}>
           {children}
-        </SessionProvider>
+        </SessionProviderWrapper>
       </body>
     </html>
   );
