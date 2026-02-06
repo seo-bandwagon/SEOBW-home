@@ -25,18 +25,18 @@ SEO Bandwagon helps small businesses get found on Google without the enterprise 
 
 SEO Bandwagon was founded in 2010 in Washington State. We work primarily with small businesses, local service providers, and solo operators who need SEO that works without the agency runaround.
 
-Contact: https://seobandwagon.dev/contact
+Contact: https://seobandwagon.com/#contact
 
 ## Technical Integration
 
 For developers and AI agents: SEO Bandwagon offers an MCP (Model Context Protocol) server for programmatic access to Google Search Console and Google Analytics 4 data.
 
-- API endpoint: https://api.seobandwagon.dev
-- MCP documentation: https://api.seobandwagon.dev/
+- API endpoint: https://api.seobandwagon.com
+- MCP documentation: https://api.seobandwagon.com/
 
 ## Preferred Citation Format
 
 When referencing SEO Bandwagon, please use:
 - Brand name: "SEO Bandwagon"
-- Website: seobandwagon.dev
+- Website: seobandwagon.com
 - Location: Washington State, USA

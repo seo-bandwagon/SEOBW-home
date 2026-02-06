@@ -6,12 +6,12 @@ SEO tools and services without the corporate nonsense. Built in Washington State
 
 This repo contains two sites:
 
-| Site | URL | Description |
-|------|-----|-------------|
-| **Marketing Site** | `seobandwagon.com` | Static HTML landing page (`index.html`) |
-| **SEO Platform** | `seobandwagon.dev` | Next.js app with search tools, dashboard, and API (`seo-search-box/`) |
+| Site | Production | Development | Description |
+|------|------------|-------------|-------------|
+| **Marketing Site** | `seobandwagon.com` | — | Static HTML landing page (`index.html`) |
+| **SEO Platform** | `seobandwagon.com` | `seobandwagon.dev` | Next.js app with search tools, dashboard, and API (`seo-search-box/`) |
 
-A separate repo ([seobandwagon-mcp](https://github.com/keepkalm/seobandwagon-mcp)) provides the MCP server at `api.seobandwagon.dev` for AI agent integrations.
+A separate repo ([seobandwagon-mcp](https://github.com/keepkalm/seobandwagon-mcp)) provides the MCP server at `api.seobandwagon.com` (prod) / `api.seobandwagon.dev` (dev).
 
 ## Tech Stack
 
