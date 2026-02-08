@@ -585,85 +585,274 @@
             color: var(--pink);
         }
 
-        /* PRICING */
-        .pricing {
+        /* SERVICE PACKAGES */
+        .service-packages {
             padding: 120px 40px;
             background: var(--white);
         }
 
-        .pricing-grid {
-            max-width: 1200px;
+        .packages-grid {
+            max-width: 1300px;
             margin: 0 auto;
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-            gap: 40px;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 30px;
+        }
+
+        .package-card {
+            background: var(--navy);
+            border-top: 6px solid var(--pink);
+            position: relative;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .package-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 60px rgba(245, 55, 150, 0.25);
+        }
+
+        .package-card.featured {
+            border-top-width: 8px;
+            transform: scale(1.03);
+        }
+
+        .package-card.featured:hover {
+            transform: scale(1.03) translateY(-10px);
+        }
+
+        .package-badge {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: var(--pink);
+            color: var(--white);
+            padding: 6px 16px;
+            font-family: var(--font-heading);
+            font-size: 0.9rem;
+            letter-spacing: 2px;
+        }
+
+        .package-header {
+            padding: 50px 35px 30px;
+            text-align: center;
+            border-bottom: 1px solid rgba(245, 55, 150, 0.2);
+        }
+
+        .package-type {
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            color: rgba(245, 245, 245, 0.5);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+
+        .package-name {
+            font-family: var(--font-heading);
+            font-size: 2.25rem;
+            color: var(--pink);
+            letter-spacing: 3px;
+            margin-bottom: 20px;
+        }
+
+        .package-price {
+            font-family: var(--font-heading);
+            font-size: 3.5rem;
+            color: var(--white);
+            letter-spacing: 2px;
+            line-height: 1;
+        }
+
+        .package-price-note {
+            font-family: var(--font-body);
+            font-size: 1rem;
+            color: rgba(245, 245, 245, 0.6);
+            margin-top: 8px;
+        }
+
+        .package-description {
+            padding: 25px 35px;
+            color: rgba(245, 245, 245, 0.85);
+            font-size: 1.05rem;
+            line-height: 1.7;
+            border-bottom: 1px solid rgba(245, 55, 150, 0.1);
+        }
+
+        .package-deliverables {
+            padding: 30px 35px;
+            flex-grow: 1;
+        }
+
+        .package-deliverables-title {
+            font-family: var(--font-heading);
+            font-size: 1.1rem;
+            color: var(--pink);
+            letter-spacing: 2px;
+            margin-bottom: 20px;
+        }
+
+        .package-list {
+            list-style: none;
+        }
+
+        .package-list li {
+            padding: 12px 0;
+            color: rgba(245, 245, 245, 0.9);
+            font-size: 0.95rem;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .package-list li::before {
+            content: "✓";
+            color: var(--pink);
+            font-weight: bold;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .package-ideal {
+            padding: 20px 35px;
+            background: rgba(245, 55, 150, 0.08);
+            border-top: 1px solid rgba(245, 55, 150, 0.15);
+        }
+
+        .package-ideal-label {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--pink);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+
+        .package-ideal-text {
+            color: rgba(245, 245, 245, 0.7);
+            font-size: 0.9rem;
+        }
+
+        .package-cta {
+            padding: 30px 35px 40px;
+        }
+
+        .package-cta .btn {
+            width: 100%;
+            text-align: center;
+        }
+
+        .packages-note {
+            max-width: 800px;
+            margin: 60px auto 0;
+            text-align: center;
+            color: var(--navy);
+        }
+
+        .packages-note p {
+            font-size: 1.1rem;
+            line-height: 1.8;
+            margin-bottom: 15px;
+        }
+
+        .packages-note strong {
+            color: var(--pink);
+        }
+
+        /* PRICING (SaaS Tools) */
+        .pricing {
+            padding: 100px 40px;
+            background: var(--navy);
+        }
+
+        .pricing .section-header {
+            margin-bottom: 50px;
+        }
+
+        .pricing-intro {
+            max-width: 800px;
+            margin: 0 auto 50px;
+            text-align: center;
+            color: rgba(245, 245, 245, 0.8);
+            font-size: 1.15rem;
+            line-height: 1.8;
+        }
+
+        .pricing-grid {
+            max-width: 1000px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 25px;
         }
 
         .pricing-card {
-            background: var(--navy);
-            padding: 60px 40px;
+            background: rgba(245, 245, 245, 0.03);
+            border: 2px solid rgba(245, 55, 150, 0.2);
+            padding: 40px 30px;
             text-align: center;
-            border-top: 6px solid var(--pink);
             position: relative;
             transition: all 0.3s ease;
         }
 
         .pricing-card:hover {
-            transform: scale(1.05);
-            box-shadow: 0 20px 60px rgba(245, 55, 150, 0.3);
+            border-color: var(--pink);
+            transform: translateY(-5px);
         }
 
         .pricing-badge {
             position: absolute;
-            top: 30px;
-            right: 30px;
+            top: 15px;
+            right: 15px;
             background: var(--pink);
             color: var(--white);
-            padding: 8px 20px;
+            padding: 5px 12px;
             font-family: var(--font-heading);
-            font-size: 1rem;
-            letter-spacing: 2px;
+            font-size: 0.8rem;
+            letter-spacing: 1px;
         }
 
         .pricing-name {
             font-family: var(--font-heading);
-            font-size: 2.5rem;
+            font-size: 1.75rem;
             color: var(--pink);
-            letter-spacing: 3px;
-            margin-bottom: 30px;
+            letter-spacing: 2px;
+            margin-bottom: 15px;
         }
 
         .pricing-price {
             font-family: var(--font-heading);
-            font-size: 5rem;
+            font-size: 3rem;
             color: var(--white);
-            letter-spacing: 2px;
-            margin-bottom: 10px;
+            letter-spacing: 1px;
+            margin-bottom: 5px;
         }
 
         .pricing-period {
-            font-size: 1.25rem;
-            color: rgba(245, 245, 245, 0.7);
-            margin-bottom: 40px;
+            font-size: 1rem;
+            color: rgba(245, 245, 245, 0.6);
+            margin-bottom: 25px;
         }
 
         .pricing-features {
             list-style: none;
-            margin-bottom: 40px;
+            margin-bottom: 25px;
             text-align: left;
         }
 
         .pricing-features li {
-            padding: 15px 0;
-            border-bottom: 1px solid rgba(245, 245, 245, 0.1);
-            color: rgba(245, 245, 245, 0.9);
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(245, 245, 245, 0.08);
+            color: rgba(245, 245, 245, 0.85);
+            font-size: 0.9rem;
         }
 
         .pricing-features li:before {
             content: "✓ ";
             color: var(--pink);
             font-weight: bold;
-            margin-right: 10px;
+            margin-right: 8px;
         }
 
         /* BUTTONS */
@@ -1017,6 +1206,21 @@
         }
 
         /* RESPONSIVE */
+        @media (max-width: 1100px) {
+            .packages-grid {
+                grid-template-columns: 1fr;
+                max-width: 500px;
+            }
+
+            .package-card.featured {
+                transform: none;
+            }
+
+            .package-card.featured:hover {
+                transform: translateY(-10px);
+            }
+        }
+
         @media (max-width: 768px) {
             .nav-links {
                 display: none;
@@ -1057,6 +1261,26 @@
             .results-grid,
             .pricing-grid {
                 grid-template-columns: 1fr;
+            }
+
+            .packages-grid {
+                gap: 40px;
+            }
+
+            .package-header {
+                padding: 40px 25px 25px;
+            }
+
+            .package-description,
+            .package-deliverables,
+            .package-ideal,
+            .package-cta {
+                padding-left: 25px;
+                padding-right: 25px;
+            }
+
+            .package-price {
+                font-size: 2.75rem;
             }
 
             .case-study-metrics {
@@ -1102,6 +1326,11 @@
                 font-size: 1.25rem;
                 padding: 18px 30px;
             }
+
+            .service-packages,
+            .pricing {
+                padding: 80px 20px;
+            }
         }
 
         /* REDUCED MOTION */
@@ -1135,9 +1364,9 @@
             <ul class="nav-links">
                 <li><a href="#services" class="nav-link">SERVICES</a></li>
                 <li><a href="#results" class="nav-link">RESULTS</a></li>
-                <li><a href="#pricing" class="nav-link">PRICING</a></li>
+                <li><a href="#pricing" class="nav-link">PACKAGES</a></li>
+                <li><a href="#tools" class="nav-link">TOOLS</a></li>
                 <li><a href="#faq" class="nav-link">FAQ</a></li>
-                <li><a href="/blog" class="nav-link">BLOG</a></li>
             </ul>
             <a href="#free-audit" class="nav-cta">FREE AUDIT</a>
             <button class="nav-mobile-toggle" aria-label="Toggle menu">
@@ -1370,28 +1599,143 @@
         </div>
     </section>
 
-    <!-- PRICING -->
-    <section class="pricing" id="pricing">
+    <!-- SERVICE PACKAGES -->
+    <section class="service-packages" id="pricing">
         <div class="section-header">
-            <h2 class="section-title">PRICING</h2>
-            <p class="section-subtitle">No hidden fees. No surprise charges. No contracts.</p>
+            <h2 class="section-title">SERVICE PACKAGES</h2>
+            <p class="section-subtitle">Done-for-you SEO services with clear deliverables</p>
         </div>
+        <div class="packages-grid">
+            <!-- SEO AUDIT -->
+            <div class="package-card">
+                <div class="package-header">
+                    <div class="package-type">One-Time</div>
+                    <h3 class="package-name">SEO AUDIT</h3>
+                    <div class="package-price">$497</div>
+                    <div class="package-price-note">one-time investment</div>
+                </div>
+                <div class="package-description">
+                    A comprehensive analysis of your website's SEO health with a prioritized action plan you can implement yourself or hand off to your developer.
+                </div>
+                <div class="package-deliverables">
+                    <div class="package-deliverables-title">WHAT YOU GET:</div>
+                    <ul class="package-list">
+                        <li>47-point technical SEO audit</li>
+                        <li>Keyword research (50+ opportunities)</li>
+                        <li>Top 3 competitor analysis</li>
+                        <li>Google Business Profile review</li>
+                        <li>Content gap analysis</li>
+                        <li>Page speed & Core Web Vitals report</li>
+                        <li>Prioritized fix list with time estimates</li>
+                        <li>30-minute strategy call walkthrough</li>
+                    </ul>
+                </div>
+                <div class="package-ideal">
+                    <div class="package-ideal-label">Ideal for:</div>
+                    <div class="package-ideal-text">Businesses with in-house teams who need a roadmap</div>
+                </div>
+                <div class="package-cta">
+                    <a href="#free-audit" class="btn btn-primary">GET STARTED</a>
+                </div>
+            </div>
+
+            <!-- MONTHLY SEO -->
+            <div class="package-card featured">
+                <span class="package-badge">MOST POPULAR</span>
+                <div class="package-header">
+                    <div class="package-type">Ongoing</div>
+                    <h3 class="package-name">MONTHLY SEO</h3>
+                    <div class="package-price">$1,497</div>
+                    <div class="package-price-note">per month • no contracts</div>
+                </div>
+                <div class="package-description">
+                    Hands-on SEO management that grows your organic traffic month over month. We do the work — you see the results in Google Search Console.
+                </div>
+                <div class="package-deliverables">
+                    <div class="package-deliverables-title">WHAT YOU GET:</div>
+                    <ul class="package-list">
+                        <li>Everything in SEO Audit</li>
+                        <li>Monthly on-page optimization</li>
+                        <li>Technical SEO fixes (as needed)</li>
+                        <li>Google Business Profile management</li>
+                        <li>Local citation building & cleanup</li>
+                        <li>Monthly keyword tracking report</li>
+                        <li>Competitor monitoring</li>
+                        <li>2x monthly strategy calls</li>
+                        <li>Direct Slack/email access</li>
+                    </ul>
+                </div>
+                <div class="package-ideal">
+                    <div class="package-ideal-label">Ideal for:</div>
+                    <div class="package-ideal-text">Local businesses ready to invest in growth</div>
+                </div>
+                <div class="package-cta">
+                    <a href="#free-audit" class="btn btn-primary">GET STARTED</a>
+                </div>
+            </div>
+
+            <!-- FULL-SERVICE SEO -->
+            <div class="package-card">
+                <div class="package-header">
+                    <div class="package-type">Premium</div>
+                    <h3 class="package-name">FULL-SERVICE</h3>
+                    <div class="package-price">$2,997</div>
+                    <div class="package-price-note">per month • 6-month minimum</div>
+                </div>
+                <div class="package-description">
+                    The complete package: SEO + content + reporting. We handle everything so you can focus on running your business.
+                </div>
+                <div class="package-deliverables">
+                    <div class="package-deliverables-title">WHAT YOU GET:</div>
+                    <ul class="package-list">
+                        <li>Everything in Monthly SEO</li>
+                        <li>4 SEO blog posts per month</li>
+                        <li>Landing page creation & optimization</li>
+                        <li>Link building (white-hat only)</li>
+                        <li>Schema markup implementation</li>
+                        <li>Quarterly content strategy</li>
+                        <li>Custom analytics dashboard</li>
+                        <li>Weekly progress reports</li>
+                        <li>Priority support (same-day response)</li>
+                    </ul>
+                </div>
+                <div class="package-ideal">
+                    <div class="package-ideal-label">Ideal for:</div>
+                    <div class="package-ideal-text">Established businesses seeking aggressive growth</div>
+                </div>
+                <div class="package-cta">
+                    <a href="#free-audit" class="btn btn-primary">GET STARTED</a>
+                </div>
+            </div>
+        </div>
+        <div class="packages-note">
+            <p><strong>Not sure which package is right?</strong> Start with a free audit — we'll analyze your site and recommend the best path forward. No pressure, just data.</p>
+            <p>All packages include real reporting from <strong>Google Search Console</strong> and <strong>Google Analytics</strong> — not vanity metrics.</p>
+        </div>
+    </section>
+
+    <!-- SELF-SERVICE TOOLS -->
+    <section class="pricing" id="tools">
+        <div class="section-header">
+            <h2 class="section-title" style="color: var(--white);">DIY TOOLS</h2>
+            <p class="section-subtitle">Prefer to do it yourself? Our tools are free to start.</p>
+        </div>
+        <p class="pricing-intro">All our managed services use the same tools we offer for self-service. Start free, upgrade when you need more power.</p>
         <div class="pricing-grid">
             <div class="pricing-card">
                 <h3 class="pricing-name">FREE</h3>
                 <div class="pricing-price">$0</div>
                 <div class="pricing-period">forever</div>
                 <ul class="pricing-features">
-                    <li>SEO audits (unlimited scans)</li>
+                    <li>Unlimited SEO audits</li>
                     <li>10 keywords tracked</li>
                     <li>Citation monitoring</li>
                     <li>Weekly email reports</li>
-                    <li>1 business location</li>
                 </ul>
                 <a href="#free-audit" class="btn btn-primary" style="width: 100%;">START FREE</a>
             </div>
             <div class="pricing-card">
-                <span class="pricing-badge">POPULAR</span>
+                <span class="pricing-badge">BEST VALUE</span>
                 <h3 class="pricing-name">PRO</h3>
                 <div class="pricing-price">$99</div>
                 <div class="pricing-period">/month</div>
@@ -1399,21 +1743,19 @@
                     <li>Everything in Free</li>
                     <li>Unlimited keywords</li>
                     <li>Competitor tracking</li>
-                    <li>Unlimited locations</li>
                     <li>Priority support</li>
                 </ul>
                 <a href="/signup?plan=pro" class="btn btn-primary" style="width: 100%;">GO PRO</a>
             </div>
             <div class="pricing-card">
-                <h3 class="pricing-name">ENTERPRISE</h3>
-                <div class="pricing-price">CUSTOM</div>
-                <div class="pricing-period">let's talk</div>
+                <h3 class="pricing-name">AGENCY</h3>
+                <div class="pricing-price">$299</div>
+                <div class="pricing-period">/month</div>
                 <ul class="pricing-features">
                     <li>Everything in Pro</li>
                     <li>White label reports</li>
+                    <li>Unlimited clients</li>
                     <li>API access</li>
-                    <li>Dedicated support</li>
-                    <li>Custom development</li>
                 </ul>
                 <a href="#free-audit" class="btn btn-primary" style="width: 100%;">CONTACT US</a>
             </div>
