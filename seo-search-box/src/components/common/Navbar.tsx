@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useSession, signIn, signOut } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 import { User, LogOut, History, Bookmark, LayoutDashboard } from "lucide-react";
 
 export function Navbar() {
@@ -57,12 +57,12 @@ export function Navbar() {
           ) : session?.user ? (
             <UserMenu user={session.user} />
           ) : (
-            <button
-              onClick={() => signIn()}
-              className="font-heading text-xl text-[#F5F5F5]/70 tracking-[1px] transition-all hover:text-[#F5F5F5] bg-transparent border-none cursor-pointer"
+            <Link
+              href="/auth/signin"
+              className="font-heading text-xl text-[#F5F5F5]/70 tracking-[1px] transition-all hover:text-[#F5F5F5] no-underline"
             >
               SIGN IN
-            </button>
+            </Link>
           )}
         </div>
       </div>
