@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
-import { User, LogOut, History, Bookmark, LayoutDashboard } from "lucide-react";
+import { User, LogOut, History, Bookmark, LayoutDashboard, MapPin, Navigation, Building2 } from "lucide-react";
 
 export function Navbar() {
   const { data: session, status } = useSession();
@@ -27,6 +27,37 @@ export function Navbar() {
             >
               SEARCH
             </Link>
+          </li>
+          {/* Tools Dropdown */}
+          <li className="relative group">
+            <span className="font-heading text-xl text-[#F5F5F5]/70 tracking-[1px] transition-all hover:text-[#F5F5F5] cursor-pointer">
+              TOOLS
+            </span>
+            <div className="absolute left-0 top-full mt-2 w-56 rounded-lg bg-[#000022] border-2 border-pink shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+              <div className="p-2">
+                <Link
+                  href="/tools/local-rank"
+                  className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-[#F5F5F5]/70 hover:bg-pink/20 hover:text-[#F5F5F5] transition-colors no-underline"
+                >
+                  <MapPin className="h-4 w-4 text-pink" />
+                  Local Rank Tracker
+                </Link>
+                <Link
+                  href="/tools/lat-lng"
+                  className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-[#F5F5F5]/70 hover:bg-pink/20 hover:text-[#F5F5F5] transition-colors no-underline"
+                >
+                  <Navigation className="h-4 w-4 text-blue-400" />
+                  Lat/Long Lookup
+                </Link>
+                <Link
+                  href="/tools/place-id"
+                  className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-[#F5F5F5]/70 hover:bg-pink/20 hover:text-[#F5F5F5] transition-colors no-underline"
+                >
+                  <Building2 className="h-4 w-4 text-green-400" />
+                  Place ID Finder
+                </Link>
+              </div>
+            </div>
           </li>
           {session && (
             <>
