@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Search, Loader2, Globe, Phone, Building2, Hash, MapPin } from "lucide-react";
 import { parseInput, type InputType, type ParsedInput } from "@/lib/parsers/inputParser";
+import { useAutocomplete } from "@/lib/hooks/useAutocomplete";
 import { cn } from "@/lib/utils";
 
 const INPUT_TYPE_CONFIG: Record<InputType, { icon: typeof Search; label: string; color: string; bgColor: string }> = {
@@ -45,6 +46,14 @@ export function SearchBox() {
   const [isLoading, setIsLoading] = useState(false);
   const [parsedInput, setParsedInput] = useState<ParsedInput | null>(null);
   const [isFocused, setIsFocused] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState(-1);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const { predictions, isLoading: isLoadingSuggestions, resetSession } = useAutocomplete(query, {
+    minLength: 3,
+    debounceMs: 250,
+  });
 
   // Debounced input parsing
   useEffect(() => {
@@ -56,12 +65,19 @@ export function SearchBox() {
     }
   }, [query]);
 
+  // Show suggestions when we have predictions and input is focused
+  useEffect(() => {
+    setShowSuggestions(isFocused && predictions.length > 0);
+    setSelectedIndex(-1);
+  }, [isFocused, predictions]);
+
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
       if (!query.trim() || isLoading) return;
 
       setIsLoading(true);
+      setShowSuggestions(false);
 
       try {
         const parsed = parseInput(query);
@@ -84,6 +100,46 @@ export function SearchBox() {
       }
     },
     [query, isLoading, router]
+  );
+
+  const handleSelectSuggestion = useCallback(
+    (suggestion: typeof predictions[0]) => {
+      setQuery(suggestion.mainText);
+      setShowSuggestions(false);
+      resetSession();
+      inputRef.current?.focus();
+    },
+    [resetSession]
+  );
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (!showSuggestions || predictions.length === 0) return;
+
+      switch (e.key) {
+        case "ArrowDown":
+          e.preventDefault();
+          setSelectedIndex((prev) =>
+            prev < predictions.length - 1 ? prev + 1 : prev
+          );
+          break;
+        case "ArrowUp":
+          e.preventDefault();
+          setSelectedIndex((prev) => (prev > 0 ? prev - 1 : -1));
+          break;
+        case "Enter":
+          if (selectedIndex >= 0) {
+            e.preventDefault();
+            handleSelectSuggestion(predictions[selectedIndex]);
+          }
+          break;
+        case "Escape":
+          setShowSuggestions(false);
+          setSelectedIndex(-1);
+          break;
+      }
+    },
+    [showSuggestions, predictions, selectedIndex, handleSelectSuggestion]
   );
 
   const typeConfig = parsedInput ? INPUT_TYPE_CONFIG[parsedInput.type] : null;
@@ -120,11 +176,15 @@ export function SearchBox() {
 
         {/* Input Field */}
         <input
+          ref={inputRef}
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onFocus={() => setIsFocused(true)}
-          onBlur={() => setIsFocused(false)}
+          onBlur={() => {
+            setTimeout(() => setIsFocused(false), 200);
+          }}
+          onKeyDown={handleKeyDown}
           placeholder="Enter keyword, URL, business name, or phone number..."
           className="flex-1 bg-transparent px-4 py-4 text-lg text-white placeholder-slate-500 outline-none"
           disabled={isLoading}
@@ -155,8 +215,62 @@ export function SearchBox() {
         </button>
       </div>
 
+      {/* Autocomplete Suggestions */}
+      {showSuggestions && (
+        <div className="absolute top-full left-0 right-0 mt-2 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl overflow-hidden z-50">
+          {isLoadingSuggestions && predictions.length === 0 ? (
+            <div className="px-4 py-3 text-slate-400 text-sm flex items-center gap-2">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Loading suggestions...
+            </div>
+          ) : (
+            <ul className="py-2">
+              {predictions.map((prediction, index) => {
+                const isAddress =
+                  prediction.types.includes("geocode") ||
+                  prediction.types.includes("street_address");
+                const Icon = isAddress ? MapPin : Building2;
+
+                return (
+                  <li key={prediction.placeId}>
+                    <button
+                      type="button"
+                      onClick={() => handleSelectSuggestion(prediction)}
+                      onMouseEnter={() => setSelectedIndex(index)}
+                      className={cn(
+                        "w-full px-4 py-3 flex items-start gap-3 text-left transition-colors",
+                        index === selectedIndex
+                          ? "bg-blue-500/20"
+                          : "hover:bg-slate-700/50"
+                      )}
+                    >
+                      <Icon
+                        className={cn(
+                          "h-5 w-5 mt-0.5 flex-shrink-0",
+                          isAddress ? "text-pink-400" : "text-orange-400"
+                        )}
+                      />
+                      <div className="min-w-0">
+                        <div className="text-white font-medium truncate">
+                          {prediction.mainText}
+                        </div>
+                        {prediction.secondaryText && (
+                          <div className="text-slate-400 text-sm truncate">
+                            {prediction.secondaryText}
+                          </div>
+                        )}
+                      </div>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+      )}
+
       {/* Input Detection Feedback */}
-      {parsedInput && query.trim().length >= 3 && (
+      {parsedInput && query.trim().length >= 3 && !showSuggestions && (
         <div className="mt-3 flex items-center gap-2 text-sm text-slate-400">
           <span>Detected:</span>
           <span className={cn("font-medium", typeConfig?.color)}>
