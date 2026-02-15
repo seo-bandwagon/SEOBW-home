@@ -51,6 +51,29 @@ export async function POST(request: NextRequest) {
     }
 
     const response = await fetch(url);
+
+    if (!response.ok) {
+      let errorBody = "";
+      try {
+        errorBody = await response.text();
+      } catch {
+        // ignore body read errors
+      }
+
+      console.error("Geocode upstream HTTP error:", {
+        status: response.status,
+        statusText: response.statusText,
+        body: errorBody,
+      });
+
+      return NextResponse.json(
+        {
+          error: "Geocoding service error",
+          message: "Upstream geocoding request failed",
+        },
+        { status: 502 }
+      );
+    }
     const data = await response.json();
 
     if (data.status === "ZERO_RESULTS") {
