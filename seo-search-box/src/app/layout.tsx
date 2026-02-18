@@ -25,6 +25,14 @@ export const metadata: Metadata = {
   title: "SEO Bandwagon - SEO Services That Actually Work | Seattle",
   description: "Free SEO audit, rank tracking, and local SEO tools. No corporate nonsense, just results. Built in Seattle since 2010.",
   keywords: "SEO, local SEO, SEO services, free SEO audit, rank tracker, Seattle SEO",
+  robots: {
+    index: false,
+    follow: false,
+    googleBot: {
+      index: false,
+      follow: false,
+    },
+  },
   openGraph: {
     title: "SEO Bandwagon - SEO Services That Actually Work",
     description: "Free SEO audit, rank tracking, and local SEO tools. No corporate nonsense, just results.",
