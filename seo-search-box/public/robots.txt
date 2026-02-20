@@ -1,0 +1,6 @@
+# Development site - do not index
+User-agent: *
+Disallow: /
+
+# No indexing
+Noindex: /
