@@ -318,21 +318,25 @@ async function searchKeyword(keyword: string) {
     ? autocompleteData.value?.items?.map((item) => item.suggestion) || []
     : [];
 
+  // NOTE: DataForSEO Google Ads search_volume/live returns keyword metrics at the
+  // ROOT level of each result (e.g. volume.search_volume), not nested under keyword_info.
+  // Verified against live API on 2026-02-21.
   return {
     keyword: {
       keyword,
-      searchVolume: volume?.keyword_info?.search_volume || null,
-      cpcLow: volume?.keyword_info?.low_top_of_page_bid || null,
-      cpcHigh: volume?.keyword_info?.high_top_of_page_bid || null,
-      cpcAvg: volume?.keyword_info?.cpc || null,
-      competition: volume?.keyword_info?.competition || null,
+      searchVolume: volume?.search_volume ?? null,
+      cpcLow: volume?.low_top_of_page_bid ?? null,
+      cpcHigh: volume?.high_top_of_page_bid ?? null,
+      cpcAvg: volume?.cpc ?? null,
+      competition: volume?.competition ?? null,
       difficulty: null, // Would need separate API call
-      monthlySearches: volume?.keyword_info?.monthly_searches || [],
+      monthlySearches: volume?.monthly_searches || [],
     },
+    // NOTE: keywords_for_keywords/live also returns metrics at root level, not under keyword_info.
     relatedKeywords: related.slice(0, 50).map((kw) => ({
       keyword: kw.keyword,
-      searchVolume: kw.keyword_info?.search_volume || null,
-      cpc: kw.keyword_info?.cpc || null,
+      searchVolume: kw.search_volume ?? null,
+      cpc: kw.cpc ?? null,
       type: "related",
     })),
     autocomplete,

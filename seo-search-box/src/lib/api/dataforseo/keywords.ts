@@ -10,88 +10,58 @@ import { dataforseo } from "./client";
 // Types
 // ============================================
 
+/**
+ * DataForSEO Google Ads Search Volume response structure.
+ *
+ * IMPORTANT: The API returns keyword metrics (search_volume, cpc, competition, etc.)
+ * at the ROOT level of each result object — NOT nested under a `keyword_info` key.
+ * This was verified against the live API on 2026-02-21.
+ *
+ * API docs: https://docs.dataforseo.com/v3/keywords_data/google_ads/search_volume/live/
+ */
 export interface KeywordSearchVolumeResult {
   keyword: string;
+  spell: string | null;
   location_code: number;
   language_code: string;
   search_partners: boolean;
-  keyword_info: {
-    se_type: string;
-    last_updated_time: string;
-    competition: number;
-    competition_level: string;
-    cpc: number;
+  // Keyword metrics are at root level in the API response
+  competition: string | null;        // e.g. "LOW", "MEDIUM", "HIGH"
+  competition_index: number | null;  // 0-100 numeric competition score
+  search_volume: number | null;
+  low_top_of_page_bid: number | null;
+  high_top_of_page_bid: number | null;
+  cpc: number | null;
+  monthly_searches: Array<{
+    year: number;
+    month: number;
     search_volume: number;
-    low_top_of_page_bid: number;
-    high_top_of_page_bid: number;
-    categories: number[];
-    monthly_searches: Array<{
-      year: number;
-      month: number;
-      search_volume: number;
-    }>;
-  };
-  keyword_info_normalized_with_bing: {
-    last_updated_time: string;
-    search_volume: number;
-    is_normalized: boolean;
-  } | null;
-  impressions_info: {
-    se_type: string;
-    last_updated_time: string;
-    bid: number;
-    match_type: string;
-    ad_position_min: number;
-    ad_position_max: number;
-    ad_position_average: number;
-    cpc_min: number;
-    cpc_max: number;
-    cpc_average: number;
-    daily_impressions_min: number;
-    daily_impressions_max: number;
-    daily_impressions_average: number;
-    daily_clicks_min: number;
-    daily_clicks_max: number;
-    daily_clicks_average: number;
-    daily_cost_min: number;
-    daily_cost_max: number;
-    daily_cost_average: number;
-  } | null;
-  bing_keyword_info: {
-    last_updated_time: string;
-    search_volume: number;
-  } | null;
-  search_intent_info: {
-    se_type: string;
-    main_intent: string;
-    foreign_intent: string[];
-    last_updated_time: string;
-  } | null;
+  }>;
 }
 
+/**
+ * DataForSEO Google Ads keywords_for_keywords response structure.
+ *
+ * Same as search_volume — metrics are at root level, not under keyword_info.
+ * Verified against live API on 2026-02-21.
+ */
 export interface KeywordSuggestionsResult {
   keyword: string;
   location_code: number;
   language_code: string;
-  keyword_info: {
-    se_type: string;
-    last_updated_time: string;
-    competition: number;
-    competition_level: string;
-    cpc: number;
+  search_partners: boolean;
+  // Keyword metrics at root level
+  competition: string | null;
+  competition_index: number | null;
+  search_volume: number | null;
+  low_top_of_page_bid: number | null;
+  high_top_of_page_bid: number | null;
+  cpc: number | null;
+  monthly_searches: Array<{
+    year: number;
+    month: number;
     search_volume: number;
-    categories: number[];
-    monthly_searches: Array<{
-      year: number;
-      month: number;
-      search_volume: number;
-    }>;
-  };
-  search_intent_info: {
-    se_type: string;
-    main_intent: string;
-    foreign_intent: string[];
-  } | null;
+  }>;
 }
 
 export interface SearchIntentResult {
