@@ -57,6 +57,8 @@ export function RankTrackerClient() {
   const [tracked, setTracked] = useState<TrackedKeyword[]>([]);
   const [loadingTracked, setLoadingTracked] = useState(true);
   const [recheckingId, setRecheckingId] = useState<string | null>(null);
+  const [trackLimit, setTrackLimit] = useState(10);
+  const [trackRemaining, setTrackRemaining] = useState(10);
   const isLoggedIn = !!session?.user;
 
   // Load tracked keywords on mount (only if logged in)
@@ -70,6 +72,8 @@ export function RankTrackerClient() {
       if (res.ok) {
         const data = await res.json();
         setTracked(data.tracked || []);
+        if (data.limit !== undefined) setTrackLimit(data.limit);
+        if (data.remaining !== undefined) setTrackRemaining(data.remaining);
       }
     } catch {
       // Silently fail
@@ -136,7 +140,7 @@ export function RankTrackerClient() {
   async function handleTrack() {
     if (!result) return;
     try {
-      await fetch("/api/rank-track/tracked", {
+      const res = await fetch("/api/rank-track/tracked", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -145,6 +149,13 @@ export function RankTrackerClient() {
           position: result.position,
         }),
       });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        if (errData.limit) {
+          setError(`Keyword limit reached (${errData.limit} max). Remove a keyword to add more.`);
+        }
+        return;
+      }
       await loadTracked();
     } catch {
       // Silently fail
@@ -230,10 +241,16 @@ export function RankTrackerClient() {
       {!loadingTracked && tracked.length > 0 && (
         <div className="rounded-xl bg-[#F5F5F5]/5 border border-[#F5F5F5]/10 p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-heading text-xl text-[#F5F5F5] tracking-wider flex items-center gap-2">
-              <Star className="h-5 w-5 text-pink" />
-              TRACKED KEYWORDS
-            </h3>
+            <div>
+              <h3 className="font-heading text-xl text-[#F5F5F5] tracking-wider flex items-center gap-2">
+                <Star className="h-5 w-5 text-pink" />
+                TRACKED KEYWORDS
+              </h3>
+              <p className="text-xs text-[#F5F5F5]/40 mt-1">
+                {tracked.length} / {trackLimit} keywords used
+                {trackRemaining === 0 && " — limit reached"}
+              </p>
+            </div>
             <button
               onClick={handleRecheckAll}
               disabled={recheckingId !== null}

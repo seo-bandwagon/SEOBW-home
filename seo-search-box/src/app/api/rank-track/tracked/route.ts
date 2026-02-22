@@ -25,7 +25,7 @@ export async function GET() {
 
   try {
     const tracked = await getTrackedKeywords(session.user.id);
-    return NextResponse.json({ tracked });
+    return NextResponse.json({ tracked, limit: 10, remaining: Math.max(0, 10 - tracked.length) });
   } catch (error) {
     console.error("Failed to get tracked keywords:", error);
     return NextResponse.json(
@@ -54,6 +54,8 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const MAX_TRACKED_KEYWORDS = 10;
+
   try {
     const body = await request.json();
     const { keyword, domain, position } = body as {
@@ -66,6 +68,25 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: "keyword and domain are required" },
         { status: 400 }
+      );
+    }
+
+    // Check if user is at the limit
+    const existing = await getTrackedKeywords(session.user.id);
+    const cleanKeyword = keyword.toLowerCase().trim();
+    const cleanDomain = domain.toLowerCase().trim().replace(/^(https?:\/\/)?(www\.)?/, "").replace(/\/+$/, "");
+    const alreadyTracked = existing.some(
+      (t) => t.keyword === cleanKeyword && t.domain === cleanDomain
+    );
+
+    if (!alreadyTracked && existing.length >= MAX_TRACKED_KEYWORDS) {
+      return NextResponse.json(
+        {
+          error: `Free accounts can track up to ${MAX_TRACKED_KEYWORDS} keywords. Remove a keyword or upgrade to track more.`,
+          limit: MAX_TRACKED_KEYWORDS,
+          current: existing.length,
+        },
+        { status: 403 }
       );
     }
 
