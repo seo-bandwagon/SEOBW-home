@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
       .toLowerCase();
 
     // Fetch organic SERP results
-    const serpResult = await getOrganicSerp(keyword, locationCode, "en", 100);
+    const serpResult = await getOrganicSerp(keyword, locationCode, "en", 100) as Record<string, unknown> | null;
 
     if (!serpResult) {
       return NextResponse.json(
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const items = serpResult.items || [];
+    const items = (serpResult.items as Record<string, unknown>[]) || [];
 
     // Find the domain in results
     let position: number | null = null;
