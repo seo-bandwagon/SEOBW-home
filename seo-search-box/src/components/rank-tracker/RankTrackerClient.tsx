@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useSession } from "next-auth/react";
+import Link from "next/link";
 import {
   Search,
   ExternalLink,
@@ -9,6 +11,7 @@ import {
   Trash2,
   RefreshCw,
   Star,
+  LogIn,
 } from "lucide-react";
 import { RankHistoryChart } from "./RankHistoryChart";
 
@@ -44,6 +47,7 @@ interface TrackedKeyword {
 }
 
 export function RankTrackerClient() {
+  const { data: session, status: authStatus } = useSession();
   const [keyword, setKeyword] = useState("");
   const [domain, setDomain] = useState("");
   const [loading, setLoading] = useState(false);
@@ -53,9 +57,14 @@ export function RankTrackerClient() {
   const [tracked, setTracked] = useState<TrackedKeyword[]>([]);
   const [loadingTracked, setLoadingTracked] = useState(true);
   const [recheckingId, setRecheckingId] = useState<string | null>(null);
+  const isLoggedIn = !!session?.user;
 
-  // Load tracked keywords on mount
+  // Load tracked keywords on mount (only if logged in)
   const loadTracked = useCallback(async () => {
+    if (!isLoggedIn) {
+      setLoadingTracked(false);
+      return;
+    }
     try {
       const res = await fetch("/api/rank-track/tracked");
       if (res.ok) {
@@ -67,7 +76,7 @@ export function RankTrackerClient() {
     } finally {
       setLoadingTracked(false);
     }
-  }, []);
+  }, [isLoggedIn]);
 
   useEffect(() => {
     loadTracked();
@@ -381,7 +390,7 @@ export function RankTrackerClient() {
                     {new Date(result.checkedAt).toLocaleString()}
                   </p>
                 </div>
-                {!isAlreadyTracked && (
+                {isLoggedIn && !isAlreadyTracked && (
                   <button
                     onClick={handleTrack}
                     className="flex items-center gap-1 rounded-lg bg-pink/20 border border-pink/30 px-3 py-1.5 text-sm text-pink hover:bg-pink/30 transition-colors"
@@ -390,11 +399,20 @@ export function RankTrackerClient() {
                     Track Keyword
                   </button>
                 )}
-                {isAlreadyTracked && (
+                {isLoggedIn && isAlreadyTracked && (
                   <span className="flex items-center gap-1 text-sm text-green-400/70">
                     <Star className="h-4 w-4" />
                     Tracking
                   </span>
+                )}
+                {!isLoggedIn && (
+                  <Link
+                    href="/auth/signin"
+                    className="flex items-center gap-1 rounded-lg bg-pink/20 border border-pink/30 px-3 py-1.5 text-sm text-pink hover:bg-pink/30 transition-colors no-underline"
+                  >
+                    <LogIn className="h-4 w-4" />
+                    Sign in to Track
+                  </Link>
                 )}
               </div>
             </div>

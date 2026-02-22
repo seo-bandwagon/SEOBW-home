@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
 import {
   addTrackedKeyword,
   getTrackedKeywords,
@@ -7,15 +8,23 @@ import {
 import { isDatabaseConfigured } from "@/lib/db/client";
 
 /**
- * GET — list all tracked keywords
+ * GET — list tracked keywords for the logged-in user
  */
 export async function GET() {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json(
+      { error: "Sign in to track keywords" },
+      { status: 401 }
+    );
+  }
+
   if (!isDatabaseConfigured()) {
     return NextResponse.json({ tracked: [], message: "Database not configured" });
   }
 
   try {
-    const tracked = await getTrackedKeywords();
+    const tracked = await getTrackedKeywords(session.user.id);
     return NextResponse.json({ tracked });
   } catch (error) {
     console.error("Failed to get tracked keywords:", error);
@@ -27,9 +36,17 @@ export async function GET() {
 }
 
 /**
- * POST — add a keyword+domain to tracking
+ * POST — add a keyword+domain to tracking (requires auth)
  */
 export async function POST(request: NextRequest) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json(
+      { error: "Sign in to track keywords" },
+      { status: 401 }
+    );
+  }
+
   if (!isDatabaseConfigured()) {
     return NextResponse.json(
       { error: "Database not configured" },
@@ -55,7 +72,8 @@ export async function POST(request: NextRequest) {
     const tracked = await addTrackedKeyword(
       keyword.toLowerCase().trim(),
       domain.toLowerCase().trim().replace(/^(https?:\/\/)?(www\.)?/, "").replace(/\/+$/, ""),
-      position
+      position,
+      session.user.id
     );
 
     return NextResponse.json({ tracked });
@@ -69,9 +87,17 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * DELETE — remove a tracked keyword
+ * DELETE — remove a tracked keyword (requires auth)
  */
 export async function DELETE(request: NextRequest) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json(
+      { error: "Sign in required" },
+      { status: 401 }
+    );
+  }
+
   if (!isDatabaseConfigured()) {
     return NextResponse.json(
       { error: "Database not configured" },
