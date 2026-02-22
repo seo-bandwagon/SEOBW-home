@@ -11,6 +11,7 @@ import {
   domainRankHistory,
   savedSearches,
   alerts,
+  trackedKeywords,
 } from "./schema";
 import { eq, desc, and, gte, lte, sql, inArray } from "drizzle-orm";
 
@@ -489,6 +490,103 @@ export async function getDomainRankHistory(domain: string, days = 90) {
       )
     )
     .orderBy(domainRankHistory.recordedAt);
+}
+
+// ============================================
+// Tracked Keywords Operations
+// ============================================
+
+/**
+ * Add a keyword+domain pair to tracking
+ */
+export async function addTrackedKeyword(
+  keyword: string,
+  domain: string,
+  position?: number | null,
+  userId?: string
+) {
+  // Check if already tracked
+  const existing = await db
+    .select()
+    .from(trackedKeywords)
+    .where(
+      and(
+        eq(trackedKeywords.keyword, keyword),
+        eq(trackedKeywords.domain, domain)
+      )
+    )
+    .limit(1);
+
+  if (existing.length > 0) {
+    // Update last position
+    const [updated] = await db
+      .update(trackedKeywords)
+      .set({
+        lastPosition: position,
+        lastCheckedAt: new Date(),
+      })
+      .where(eq(trackedKeywords.id, existing[0].id))
+      .returning();
+    return updated;
+  }
+
+  const [tracked] = await db
+    .insert(trackedKeywords)
+    .values({
+      keyword,
+      domain,
+      userId,
+      lastPosition: position,
+      lastCheckedAt: position !== undefined ? new Date() : undefined,
+    })
+    .returning();
+
+  return tracked;
+}
+
+/**
+ * Get all tracked keywords
+ */
+export async function getTrackedKeywords(userId?: string) {
+  if (userId) {
+    return db
+      .select()
+      .from(trackedKeywords)
+      .where(eq(trackedKeywords.userId, userId))
+      .orderBy(desc(trackedKeywords.lastCheckedAt));
+  }
+  // Return all if no user (public mode)
+  return db
+    .select()
+    .from(trackedKeywords)
+    .orderBy(desc(trackedKeywords.lastCheckedAt));
+}
+
+/**
+ * Remove a tracked keyword
+ */
+export async function removeTrackedKeyword(id: string) {
+  return db
+    .delete(trackedKeywords)
+    .where(eq(trackedKeywords.id, id))
+    .returning();
+}
+
+/**
+ * Update tracked keyword position
+ */
+export async function updateTrackedKeywordPosition(
+  id: string,
+  position: number | null
+) {
+  return db
+    .update(trackedKeywords)
+    .set({
+      lastPosition: position,
+      lastCheckedAt: new Date(),
+    })
+    .where(eq(trackedKeywords.id, id))
+    .returning();
 }
 
 // ============================================

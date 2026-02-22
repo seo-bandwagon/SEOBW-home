@@ -262,6 +262,30 @@ export const domainRankHistory = pgTable(
 );
 
 // ============================================
+// Rank Tracking Tables
+// ============================================
+
+export const trackedKeywords = pgTable(
+  "tracked_keywords",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    keyword: text("keyword").notNull(),
+    domain: text("domain").notNull(),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }),
+    lastPosition: integer("last_position"),
+    lastCheckedAt: timestamp("last_checked_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    keywordDomainIdx: index("tracked_keywords_keyword_domain_idx").on(
+      table.keyword,
+      table.domain
+    ),
+    userIdIdx: index("tracked_keywords_user_id_idx").on(table.userId),
+  })
+);
+
+// ============================================
 // User Features Tables
 // ============================================
 

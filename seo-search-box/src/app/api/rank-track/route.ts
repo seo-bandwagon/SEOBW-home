@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getOrganicSerp } from "@/lib/api/dataforseo/serp";
-import { recordSerpPosition } from "@/lib/db/queries";
+import { recordSerpPosition, addTrackedKeyword } from "@/lib/db/queries";
 import { isDatabaseConfigured } from "@/lib/db/client";
 
 export async function POST(request: NextRequest) {
@@ -61,14 +61,19 @@ export async function POST(request: NextRequest) {
     }
 
     // Save to DB if configured
+    const normalizedKeyword = keyword.toLowerCase().trim();
     if (isDatabaseConfigured()) {
       try {
         await recordSerpPosition(
-          keyword.toLowerCase().trim(),
+          normalizedKeyword,
           cleanDomain,
           position,
           rankingUrl || undefined
         );
+        // Also update tracked keyword if it exists (or add if track=true)
+        if (body.track) {
+          await addTrackedKeyword(normalizedKeyword, cleanDomain, position);
+        }
       } catch (dbError) {
         console.error("Failed to save rank check:", dbError);
       }

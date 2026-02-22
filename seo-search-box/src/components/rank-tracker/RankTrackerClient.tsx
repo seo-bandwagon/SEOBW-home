@@ -1,7 +1,15 @@
 "use client";
 
-import { useState } from "react";
-import { Search, TrendingUp, TrendingDown, Minus, ExternalLink, Loader2 } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import {
+  Search,
+  ExternalLink,
+  Loader2,
+  Plus,
+  Trash2,
+  RefreshCw,
+  Star,
+} from "lucide-react";
 import { RankHistoryChart } from "./RankHistoryChart";
 
 interface TopResult {
@@ -27,6 +35,14 @@ interface HistoryEntry {
   recordedAt: string;
 }
 
+interface TrackedKeyword {
+  id: string;
+  keyword: string;
+  domain: string;
+  lastPosition: number | null;
+  lastCheckedAt: string | null;
+}
+
 export function RankTrackerClient() {
   const [keyword, setKeyword] = useState("");
   const [domain, setDomain] = useState("");
@@ -34,22 +50,46 @@ export function RankTrackerClient() {
   const [result, setResult] = useState<RankResult | null>(null);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [tracked, setTracked] = useState<TrackedKeyword[]>([]);
+  const [loadingTracked, setLoadingTracked] = useState(true);
+  const [recheckingId, setRecheckingId] = useState<string | null>(null);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!keyword.trim() || !domain.trim()) return;
+  // Load tracked keywords on mount
+  const loadTracked = useCallback(async () => {
+    try {
+      const res = await fetch("/api/rank-track/tracked");
+      if (res.ok) {
+        const data = await res.json();
+        setTracked(data.tracked || []);
+      }
+    } catch {
+      // Silently fail
+    } finally {
+      setLoadingTracked(false);
+    }
+  }, []);
 
+  useEffect(() => {
+    loadTracked();
+  }, [loadTracked]);
+
+  async function checkRank(kw: string, dom: string, track: boolean = false) {
     setLoading(true);
     setError(null);
     setResult(null);
     setHistory([]);
+    setKeyword(kw);
+    setDomain(dom);
 
     try {
-      // Check rank
       const res = await fetch("/api/rank-track", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ keyword: keyword.trim(), domain: domain.trim() }),
+        body: JSON.stringify({
+          keyword: kw.trim(),
+          domain: dom.trim(),
+          track,
+        }),
       });
 
       if (!res.ok) {
@@ -68,12 +108,82 @@ export function RankTrackerClient() {
         const histData = await histRes.json();
         setHistory(histData.history || []);
       }
+
+      // Refresh tracked list
+      await loadTracked();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
       setLoading(false);
     }
   }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!keyword.trim() || !domain.trim()) return;
+    await checkRank(keyword, domain);
+  }
+
+  async function handleTrack() {
+    if (!result) return;
+    try {
+      await fetch("/api/rank-track/tracked", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          keyword: result.keyword,
+          domain: result.domain,
+          position: result.position,
+        }),
+      });
+      await loadTracked();
+    } catch {
+      // Silently fail
+    }
+  }
+
+  async function handleRemoveTracked(id: string) {
+    try {
+      await fetch(`/api/rank-track/tracked?id=${id}`, { method: "DELETE" });
+      setTracked((prev) => prev.filter((t) => t.id !== id));
+    } catch {
+      // Silently fail
+    }
+  }
+
+  async function handleRecheck(tk: TrackedKeyword) {
+    setRecheckingId(tk.id);
+    try {
+      const res = await fetch("/api/rank-track", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          keyword: tk.keyword,
+          domain: tk.domain,
+          track: true,
+        }),
+      });
+      if (res.ok) {
+        await loadTracked();
+      }
+    } catch {
+      // Silently fail
+    } finally {
+      setRecheckingId(null);
+    }
+  }
+
+  async function handleRecheckAll() {
+    for (const tk of tracked) {
+      await handleRecheck(tk);
+    }
+  }
+
+  const isAlreadyTracked =
+    result &&
+    tracked.some(
+      (t) => t.keyword === result.keyword && t.domain === result.domain
+    );
 
   return (
     <div className="space-y-8">
@@ -106,6 +216,96 @@ export function RankTrackerClient() {
           CHECK RANK
         </button>
       </form>
+
+      {/* Tracked Keywords */}
+      {!loadingTracked && tracked.length > 0 && (
+        <div className="rounded-xl bg-[#F5F5F5]/5 border border-[#F5F5F5]/10 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-heading text-xl text-[#F5F5F5] tracking-wider flex items-center gap-2">
+              <Star className="h-5 w-5 text-pink" />
+              TRACKED KEYWORDS
+            </h3>
+            <button
+              onClick={handleRecheckAll}
+              disabled={recheckingId !== null}
+              className="flex items-center gap-1 text-sm text-pink/70 hover:text-pink transition-colors disabled:opacity-50"
+            >
+              <RefreshCw
+                className={`h-4 w-4 ${recheckingId ? "animate-spin" : ""}`}
+              />
+              Recheck All
+            </button>
+          </div>
+          <div className="space-y-2">
+            {tracked.map((tk) => (
+              <div
+                key={tk.id}
+                className="flex items-center gap-4 rounded-lg bg-[#F5F5F5]/3 hover:bg-[#F5F5F5]/5 p-3 transition-colors"
+              >
+                {/* Position */}
+                <div
+                  className={`flex-shrink-0 w-12 h-12 rounded-full border-2 flex items-center justify-center font-heading text-lg ${
+                    tk.lastPosition === null
+                      ? "border-[#F5F5F5]/20 text-[#F5F5F5]/40"
+                      : tk.lastPosition <= 3
+                      ? "border-green-400 text-green-400"
+                      : tk.lastPosition <= 10
+                      ? "border-yellow-400 text-yellow-400"
+                      : tk.lastPosition <= 20
+                      ? "border-orange-400 text-orange-400"
+                      : "border-red-400 text-red-400"
+                  }`}
+                >
+                  {tk.lastPosition ?? "—"}
+                </div>
+                {/* Info */}
+                <div className="flex-1 min-w-0">
+                  <p className="text-[#F5F5F5]/90 text-sm font-medium truncate">
+                    {tk.keyword}
+                  </p>
+                  <p className="text-[#F5F5F5]/40 text-xs truncate">
+                    {tk.domain}
+                    {tk.lastCheckedAt && (
+                      <span className="ml-2">
+                        · {new Date(tk.lastCheckedAt).toLocaleDateString()}
+                      </span>
+                    )}
+                  </p>
+                </div>
+                {/* Actions */}
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => checkRank(tk.keyword, tk.domain, false)}
+                    className="p-2 text-[#F5F5F5]/40 hover:text-[#F5F5F5] transition-colors"
+                    title="View details"
+                  >
+                    <Search className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => handleRecheck(tk)}
+                    disabled={recheckingId === tk.id}
+                    className="p-2 text-[#F5F5F5]/40 hover:text-pink transition-colors disabled:opacity-50"
+                    title="Recheck rank"
+                  >
+                    <RefreshCw
+                      className={`h-4 w-4 ${
+                        recheckingId === tk.id ? "animate-spin" : ""
+                      }`}
+                    />
+                  </button>
+                  <button
+                    onClick={() => handleRemoveTracked(tk.id)}
+                    className="p-2 text-[#F5F5F5]/40 hover:text-red-400 transition-colors"
+                    title="Remove"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Error */}
       {error && (
@@ -156,7 +356,9 @@ export function RankTrackerClient() {
                 </h2>
                 <p className="text-[#F5F5F5]/60">
                   <span className="text-pink font-medium">{result.domain}</span>{" "}
-                  for &ldquo;<span className="text-[#F5F5F5]/80">{result.keyword}</span>&rdquo;
+                  for &ldquo;
+                  <span className="text-[#F5F5F5]/80">{result.keyword}</span>
+                  &rdquo;
                 </p>
                 {result.url && (
                   <a
@@ -170,13 +372,30 @@ export function RankTrackerClient() {
                   </a>
                 )}
               </div>
-              <div className="text-center">
-                <p className="text-xs text-[#F5F5F5]/40 uppercase tracking-wider">
-                  Checked
-                </p>
-                <p className="text-sm text-[#F5F5F5]/60">
-                  {new Date(result.checkedAt).toLocaleString()}
-                </p>
+              <div className="flex flex-col items-center gap-2">
+                <div className="text-center">
+                  <p className="text-xs text-[#F5F5F5]/40 uppercase tracking-wider">
+                    Checked
+                  </p>
+                  <p className="text-sm text-[#F5F5F5]/60">
+                    {new Date(result.checkedAt).toLocaleString()}
+                  </p>
+                </div>
+                {!isAlreadyTracked && (
+                  <button
+                    onClick={handleTrack}
+                    className="flex items-center gap-1 rounded-lg bg-pink/20 border border-pink/30 px-3 py-1.5 text-sm text-pink hover:bg-pink/30 transition-colors"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Track Keyword
+                  </button>
+                )}
+                {isAlreadyTracked && (
+                  <span className="flex items-center gap-1 text-sm text-green-400/70">
+                    <Star className="h-4 w-4" />
+                    Tracking
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -201,8 +420,9 @@ export function RankTrackerClient() {
                 <div
                   key={item.position}
                   className={`flex items-start gap-4 rounded-lg p-3 transition-colors ${
-                    item.domain.replace(/^www\./, "").toLowerCase() ===
-                    result.domain
+                    item.domain
+                      .replace(/^www\./, "")
+                      .toLowerCase() === result.domain
                       ? "bg-pink/10 border border-pink/30"
                       : "bg-[#F5F5F5]/3 hover:bg-[#F5F5F5]/5"
                   }`}
