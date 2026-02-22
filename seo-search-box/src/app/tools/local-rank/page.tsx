@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
+import Link from "next/link";
 import { Navbar } from "@/components/common/Navbar";
 import { LocalRankForm, type LocalRankFormData } from "@/components/local-rank/LocalRankForm";
 import {
@@ -9,12 +11,37 @@ import {
   LocalRankDetails,
 } from "@/components/local-rank/LocalRankGrid";
 import type { GridScanSummary } from "@/lib/dataforseo";
-import { AlertCircle, MapPin } from "lucide-react";
+import { AlertCircle, MapPin, Save, Trash2, LogIn } from "lucide-react";
+
+interface SavedLocation {
+  id: string;
+  businessName: string;
+  placeId: string | null;
+  address: string | null;
+  lat: string;
+  lng: string;
+}
 
 export default function LocalRankPage() {
+  const { data: session } = useSession();
+  const isLoggedIn = !!session?.user;
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<GridScanSummary | null>(null);
+  const [savedLocation, setSavedLocation] = useState<SavedLocation | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [lastScanData, setLastScanData] = useState<{ businessName: string; lat: number; lng: number } | null>(null);
+
+  // Load saved location
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    fetch("/api/location")
+      .then((res) => res.ok ? res.json() : null)
+      .then((data) => {
+        if (data?.location) setSavedLocation(data.location);
+      })
+      .catch(() => {});
+  }, [isLoggedIn]);
 
   const handleSubmit = async (formData: LocalRankFormData) => {
     setIsLoading(true);
@@ -34,10 +61,49 @@ export default function LocalRankPage() {
       }
 
       setResult(data);
+      setLastScanData({
+        businessName: data.business,
+        lat: data.centerLat,
+        lng: data.centerLng,
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleSaveLocation = async () => {
+    if (!lastScanData) return;
+    setSaving(true);
+    try {
+      const res = await fetch("/api/location", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          businessName: lastScanData.businessName,
+          lat: lastScanData.lat,
+          lng: lastScanData.lng,
+          placeId: result?.placeId || null,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSavedLocation(data.location);
+      }
+    } catch {
+      // Silently fail
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteLocation = async () => {
+    try {
+      const res = await fetch("/api/location", { method: "DELETE" });
+      if (res.ok) setSavedLocation(null);
+    } catch {
+      // Silently fail
     }
   };
 
@@ -62,11 +128,38 @@ export default function LocalRankPage() {
         </div>
 
         <div className="max-w-6xl mx-auto">
+          {/* Saved Location Banner */}
+          {isLoggedIn && savedLocation && !result && (
+            <div className="max-w-xl mx-auto mb-6 bg-pink-500/10 border border-pink-500/20 rounded-xl p-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <MapPin className="h-5 w-5 text-pink-400" />
+                <div>
+                  <p className="text-white font-medium text-sm">{savedLocation.businessName}</p>
+                  <p className="text-slate-400 text-xs">
+                    {savedLocation.address || `${savedLocation.lat}, ${savedLocation.lng}`}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={handleDeleteLocation}
+                className="p-2 text-slate-400 hover:text-red-400 transition-colors"
+                title="Remove saved location"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+
           {!result ? (
             /* Form State */
             <div className="max-w-xl mx-auto">
               <div className="bg-slate-800/50 backdrop-blur rounded-2xl p-8 border border-slate-700">
-                <LocalRankForm onSubmit={handleSubmit} isLoading={isLoading} />
+                <LocalRankForm
+                  onSubmit={handleSubmit}
+                  isLoading={isLoading}
+                  initialBusinessName={savedLocation?.businessName}
+                  initialLocation={savedLocation?.address || (savedLocation ? `${savedLocation.lat}, ${savedLocation.lng}` : undefined)}
+                />
 
                 {error && (
                   <div className="mt-6 p-4 bg-red-500/10 border border-red-500/20 rounded-lg flex items-start gap-3">
@@ -113,13 +206,36 @@ export default function LocalRankPage() {
           ) : (
             /* Results State */
             <div>
-              {/* Back button */}
-              <button
-                onClick={() => setResult(null)}
-                className="mb-6 text-slate-400 hover:text-white transition-colors flex items-center gap-2"
-              >
-                ← New Scan
-              </button>
+              {/* Back button + Save Location */}
+              <div className="flex items-center justify-between mb-6">
+                <button
+                  onClick={() => setResult(null)}
+                  className="text-slate-400 hover:text-white transition-colors flex items-center gap-2"
+                >
+                  ← New Scan
+                </button>
+                <div className="flex items-center gap-3">
+                  {isLoggedIn && lastScanData && (
+                    <button
+                      onClick={handleSaveLocation}
+                      disabled={saving}
+                      className="flex items-center gap-1 rounded-lg bg-pink-500/20 border border-pink-500/30 px-3 py-1.5 text-sm text-pink-400 hover:bg-pink-500/30 transition-colors disabled:opacity-50"
+                    >
+                      <Save className="h-4 w-4" />
+                      {saving ? "Saving..." : savedLocation ? "Update Location" : "Save as My Location"}
+                    </button>
+                  )}
+                  {!isLoggedIn && (
+                    <Link
+                      href="/auth/signin"
+                      className="flex items-center gap-1 rounded-lg bg-pink-500/20 border border-pink-500/30 px-3 py-1.5 text-sm text-pink-400 hover:bg-pink-500/30 transition-colors no-underline"
+                    >
+                      <LogIn className="h-4 w-4" />
+                      Sign in to Save Location
+                    </Link>
+                  )}
+                </div>
+              </div>
 
               {/* Results Header */}
               <div className="mb-8">

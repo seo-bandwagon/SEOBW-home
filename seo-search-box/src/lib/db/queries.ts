@@ -12,6 +12,7 @@ import {
   savedSearches,
   alerts,
   trackedKeywords,
+  savedLocations,
 } from "./schema";
 import { eq, desc, and, gte, lte, sql, inArray } from "drizzle-orm";
 
@@ -490,6 +491,69 @@ export async function getDomainRankHistory(domain: string, days = 90) {
       )
     )
     .orderBy(domainRankHistory.recordedAt);
+}
+
+// ============================================
+// Saved Location Operations (one per account)
+// ============================================
+
+export async function getSavedLocation(userId: string) {
+  const results = await db
+    .select()
+    .from(savedLocations)
+    .where(eq(savedLocations.userId, userId))
+    .limit(1);
+  return results[0] || null;
+}
+
+export async function saveLocation(
+  userId: string,
+  data: {
+    businessName: string;
+    placeId?: string | null;
+    address?: string | null;
+    lat: number;
+    lng: number;
+  }
+) {
+  // Upsert — one location per user
+  const existing = await getSavedLocation(userId);
+
+  if (existing) {
+    const [updated] = await db
+      .update(savedLocations)
+      .set({
+        businessName: data.businessName,
+        placeId: data.placeId,
+        address: data.address,
+        lat: data.lat.toString(),
+        lng: data.lng.toString(),
+        updatedAt: new Date(),
+      })
+      .where(eq(savedLocations.userId, userId))
+      .returning();
+    return updated;
+  }
+
+  const [created] = await db
+    .insert(savedLocations)
+    .values({
+      userId,
+      businessName: data.businessName,
+      placeId: data.placeId,
+      address: data.address,
+      lat: data.lat.toString(),
+      lng: data.lng.toString(),
+    })
+    .returning();
+  return created;
+}
+
+export async function deleteSavedLocation(userId: string) {
+  return db
+    .delete(savedLocations)
+    .where(eq(savedLocations.userId, userId))
+    .returning();
 }
 
 // ============================================

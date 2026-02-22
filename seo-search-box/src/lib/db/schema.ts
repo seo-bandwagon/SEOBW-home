@@ -262,6 +262,31 @@ export const domainRankHistory = pgTable(
 );
 
 // ============================================
+// Saved Location (one per account)
+// ============================================
+
+export const savedLocations = pgTable(
+  "saved_locations",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" })
+      .unique(),
+    businessName: text("business_name").notNull(),
+    placeId: text("place_id"),
+    address: text("address"),
+    lat: decimal("lat", { precision: 10, scale: 7 }).notNull(),
+    lng: decimal("lng", { precision: 10, scale: 7 }).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    userIdIdx: index("saved_locations_user_id_idx").on(table.userId),
+  })
+);
+
+// ============================================
 // Rank Tracking Tables
 // ============================================
 
