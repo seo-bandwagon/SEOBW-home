@@ -90,32 +90,48 @@ export async function queryMapsPoint(
  * Search for a business by name and location
  */
 /**
- * Resolve a user-friendly location string (e.g. "Seattle, WA") to a
- * DataForSEO-compatible location_name via their locations database.
- * Falls back to the original string if no match is found.
+ * US state abbreviation → full name mapping for location normalization.
  */
-async function resolveLocation(input: string): Promise<string> {
-  try {
-    const response = await fetch(
-      "https://api.dataforseo.com/v3/serp/google/locations",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Basic ${auth}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify([{ country: "US", name: input, limit: 1 }]),
-      }
-    );
-    const data = await response.json();
-    const loc = data?.tasks?.[0]?.result?.[0];
-    if (loc?.location_name) {
-      return loc.location_name;
+const US_STATES: Record<string, string> = {
+  AL: "Alabama", AK: "Alaska", AZ: "Arizona", AR: "Arkansas", CA: "California",
+  CO: "Colorado", CT: "Connecticut", DE: "Delaware", FL: "Florida", GA: "Georgia",
+  HI: "Hawaii", ID: "Idaho", IL: "Illinois", IN: "Indiana", IA: "Iowa",
+  KS: "Kansas", KY: "Kentucky", LA: "Louisiana", ME: "Maine", MD: "Maryland",
+  MA: "Massachusetts", MI: "Michigan", MN: "Minnesota", MS: "Mississippi",
+  MO: "Missouri", MT: "Montana", NE: "Nebraska", NV: "Nevada", NH: "New Hampshire",
+  NJ: "New Jersey", NM: "New Mexico", NY: "New York", NC: "North Carolina",
+  ND: "North Dakota", OH: "Ohio", OK: "Oklahoma", OR: "Oregon", PA: "Pennsylvania",
+  RI: "Rhode Island", SC: "South Carolina", SD: "South Dakota", TN: "Tennessee",
+  TX: "Texas", UT: "Utah", VT: "Vermont", VA: "Virginia", WA: "Washington",
+  WV: "West Virginia", WI: "Wisconsin", WY: "Wyoming", DC: "District of Columbia",
+};
+
+/**
+ * Normalize a user-friendly location string (e.g. "Seattle, WA") to
+ * DataForSEO's expected format: "City,State,United States"
+ */
+function normalizeLocation(input: string): string {
+  // Already in DataForSEO format (contains "United States")
+  if (input.includes("United States")) return input;
+
+  // Try to match "City, ST" or "City, State" patterns
+  const match = input.match(/^(.+?)[,\s]+([A-Z]{2})$/i);
+  if (match) {
+    const city = match[1].trim();
+    const stateAbbr = match[2].toUpperCase();
+    const stateName = US_STATES[stateAbbr];
+    if (stateName) {
+      return `${city},${stateName},United States`;
     }
-  } catch {
-    // Fall through to original
   }
-  return input;
+
+  // Try zip code pattern — just append United States
+  if (/^\d{5}(-\d{4})?$/.test(input.trim())) {
+    return input.trim();
+  }
+
+  // Fallback: append United States if not already present
+  return `${input},United States`;
 }
 
 export async function findBusiness(
@@ -123,8 +139,8 @@ export async function findBusiness(
   businessName: string,
   location: string
 ): Promise<MapsSearchResult | null> {
-  // Resolve user-friendly location to DataForSEO location_name
-  const resolvedLocation = await resolveLocation(location);
+  // Normalize user-friendly location to DataForSEO format
+  const resolvedLocation = normalizeLocation(location);
 
   const response = await fetch("https://api.dataforseo.com/v3/serp/google/maps/live/advanced", {
     method: "POST",
