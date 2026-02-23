@@ -89,11 +89,43 @@ export async function queryMapsPoint(
 /**
  * Search for a business by name and location
  */
+/**
+ * Resolve a user-friendly location string (e.g. "Seattle, WA") to a
+ * DataForSEO-compatible location_name via their locations database.
+ * Falls back to the original string if no match is found.
+ */
+async function resolveLocation(input: string): Promise<string> {
+  try {
+    const response = await fetch(
+      "https://api.dataforseo.com/v3/serp/google/locations",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Basic ${auth}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify([{ country: "US", name: input, limit: 1 }]),
+      }
+    );
+    const data = await response.json();
+    const loc = data?.tasks?.[0]?.result?.[0];
+    if (loc?.location_name) {
+      return loc.location_name;
+    }
+  } catch {
+    // Fall through to original
+  }
+  return input;
+}
+
 export async function findBusiness(
   keyword: string,
   businessName: string,
   location: string
 ): Promise<MapsSearchResult | null> {
+  // Resolve user-friendly location to DataForSEO location_name
+  const resolvedLocation = await resolveLocation(location);
+
   const response = await fetch("https://api.dataforseo.com/v3/serp/google/maps/live/advanced", {
     method: "POST",
     headers: {
@@ -103,7 +135,7 @@ export async function findBusiness(
     body: JSON.stringify([
       {
         keyword: `${keyword} ${businessName}`,
-        location_name: location,
+        location_name: resolvedLocation,
         language_code: "en",
         device: "desktop",
         os: "windows",
