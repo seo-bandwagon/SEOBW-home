@@ -148,7 +148,7 @@ function UserMenu({ user }: { user?: { name?: string | null; email?: string | nu
             Search History
           </Link>
           <Link
-            href="/saved"
+            href="/saved-searches"
             className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-[#F5F5F5]/70 hover:bg-pink/20 hover:text-[#F5F5F5] transition-colors no-underline"
           >
             <Bookmark className="h-4 w-4" />

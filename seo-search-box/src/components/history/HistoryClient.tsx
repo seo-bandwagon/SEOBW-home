@@ -263,7 +263,7 @@ export function HistoryClient({ searches }: HistoryClientProps) {
                   return (
                     <Link
                       key={search.id}
-                      href={`/results?q=${encodeURIComponent(search.inputValue)}&type=${search.inputType}`}
+                      href={`/results/${search.id}`}
                       className="flex items-center justify-between p-4 rounded-xl bg-slate-800/50 border border-slate-700 hover:border-slate-600 transition-colors group"
                     >
                       <div className="flex items-center gap-4">
