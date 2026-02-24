@@ -59,7 +59,7 @@ export async function queryMapsPoint(
     body: JSON.stringify([
       {
         keyword,
-        location_coordinate: `${lat},${lng},15`,
+        location_coordinate: `${lat.toFixed(6)},${lng.toFixed(6)},15`,
         language_code: "en",
         device: "desktop",
         os: "windows",
@@ -67,6 +67,10 @@ export async function queryMapsPoint(
       },
     ]),
   });
+
+  if (!response.ok) {
+    throw new Error(`DataForSEO API error: ${response.status} ${response.statusText}`);
+  }
 
   const data: DataForSEOResponse = await response.json();
 
