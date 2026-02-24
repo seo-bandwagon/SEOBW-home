@@ -1,3 +1,4 @@
+import { cookies } from "next/headers";
 import type { InputType } from "@/lib/parsers/inputParser";
 import { KeywordResults } from "./KeywordResults";
 import { DomainResults } from "./DomainResults";
@@ -14,10 +15,17 @@ export async function ResultsPanel({ query, type }: ResultsPanelProps) {
   // Fetch data based on input type
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
+  // Forward cookies so the search API can identify the logged-in user
+  const cookieStore = await cookies();
+  const cookieHeader = cookieStore.getAll().map((c) => `${c.name}=${c.value}`).join("; ");
+
   try {
     const response = await fetch(`${baseUrl}/api/search`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...(cookieHeader ? { Cookie: cookieHeader } : {}),
+      },
       body: JSON.stringify({ query, type }),
       cache: "no-store",
     });
