@@ -9,6 +9,7 @@ import {
   Search,
   ExternalLink,
 } from "lucide-react";
+import { SaveSearchButton } from "./SaveSearchButton";
 import {
   cn,
   formatNumber,
@@ -28,6 +29,7 @@ interface KeywordResultsProps {
     topUrls: TopUrl[];
   };
   query: string;
+  searchId?: string | null;
 }
 
 interface KeywordData {
@@ -60,11 +62,16 @@ interface TopUrl {
   position: number;
 }
 
-export function KeywordResults({ data, query }: KeywordResultsProps) {
+export function KeywordResults({ data, query, searchId }: KeywordResultsProps) {
   const { keyword, relatedKeywords, autocomplete, intent, topUrls } = data;
 
   return (
     <div className="space-y-6">
+      {/* Save Button */}
+      <div className="flex justify-end">
+        <SaveSearchButton searchId={searchId ?? null} query={query} />
+      </div>
+
       {/* Main Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard

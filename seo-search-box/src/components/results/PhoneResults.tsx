@@ -9,6 +9,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { cn, formatNumber } from "@/lib/utils";
+import { SaveSearchButton } from "./SaveSearchButton";
 
 interface PhoneResultsProps {
   data: {
@@ -16,6 +17,7 @@ interface PhoneResultsProps {
     alternateResults: AlternateResult[];
   };
   query: string;
+  searchId?: string | null;
 }
 
 interface BusinessData {
@@ -38,7 +40,7 @@ interface AlternateResult {
   category: string;
 }
 
-export function PhoneResults({ data, query }: PhoneResultsProps) {
+export function PhoneResults({ data, query, searchId }: PhoneResultsProps) {
   const { business, alternateResults } = data;
 
   if (!business && alternateResults.length === 0) {
@@ -58,6 +60,10 @@ export function PhoneResults({ data, query }: PhoneResultsProps) {
 
   return (
     <div className="space-y-6">
+      {/* Save Button */}
+      <div className="flex justify-end">
+        <SaveSearchButton searchId={searchId ?? null} query={query} />
+      </div>
       {/* Phone Number Display */}
       <div className="rounded-xl bg-gradient-to-r from-purple-500/20 to-blue-500/20 border border-purple-500/30 p-6">
         <div className="flex items-center gap-4">

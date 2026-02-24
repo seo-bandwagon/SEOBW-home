@@ -13,6 +13,7 @@ import {
   ThumbsDown,
 } from "lucide-react";
 import { cn, formatNumber } from "@/lib/utils";
+import { SaveSearchButton } from "./SaveSearchButton";
 
 interface BusinessResultsProps {
   data: {
@@ -21,6 +22,7 @@ interface BusinessResultsProps {
     maps: MapsResult[];
   };
   query: string;
+  searchId?: string | null;
 }
 
 interface BusinessData {
@@ -68,7 +70,7 @@ interface MapsResult {
   website: string;
 }
 
-export function BusinessResults({ data, query }: BusinessResultsProps) {
+export function BusinessResults({ data, query, searchId }: BusinessResultsProps) {
   const { business, reviews, maps } = data;
 
   if (!business && maps.length === 0) {
@@ -85,6 +87,11 @@ export function BusinessResults({ data, query }: BusinessResultsProps) {
 
   return (
     <div className="space-y-6">
+      {/* Save Button */}
+      <div className="flex justify-end">
+        <SaveSearchButton searchId={searchId ?? null} query={query} />
+      </div>
+
       {/* Main Business Card */}
       {business && (
         <div className="rounded-xl bg-slate-800/50 border border-slate-700 p-6">

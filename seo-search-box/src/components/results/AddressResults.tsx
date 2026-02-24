@@ -2,6 +2,7 @@
 
 import { MapPin, Navigation, Building2, ExternalLink } from "lucide-react";
 import Link from "next/link";
+import { SaveSearchButton } from "./SaveSearchButton";
 
 interface AddressResultsProps {
   data: {
@@ -9,6 +10,7 @@ interface AddressResultsProps {
     nearbyBusinesses: NearbyBusiness[];
   };
   query: string;
+  searchId?: string | null;
 }
 
 interface GeocodeData {
@@ -33,7 +35,7 @@ interface NearbyBusiness {
   distance: string;
 }
 
-export function AddressResults({ data, query }: AddressResultsProps) {
+export function AddressResults({ data, query, searchId }: AddressResultsProps) {
   const { geocode, nearbyBusinesses } = data;
 
   if (!geocode) {
@@ -52,6 +54,11 @@ export function AddressResults({ data, query }: AddressResultsProps) {
 
   return (
     <div className="space-y-6">
+      {/* Save Button */}
+      <div className="flex justify-end">
+        <SaveSearchButton searchId={searchId ?? null} query={query} />
+      </div>
+
       {/* Location Card */}
       <div className="rounded-xl bg-slate-800/50 border border-slate-700 p-6">
         <div className="flex items-start gap-4">

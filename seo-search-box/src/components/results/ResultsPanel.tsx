@@ -28,20 +28,22 @@ export async function ResultsPanel({ query, type }: ResultsPanelProps) {
 
     const data = await response.json();
 
+    const searchId = data.searchId || null;
+
     // Render appropriate results component based on type
     switch (type) {
       case "keyword":
-        return <KeywordResults data={data} query={query} />;
+        return <KeywordResults data={data} query={query} searchId={searchId} />;
       case "url":
-        return <DomainResults data={data} query={query} />;
+        return <DomainResults data={data} query={query} searchId={searchId} />;
       case "business":
-        return <BusinessResults data={data} query={query} />;
+        return <BusinessResults data={data} query={query} searchId={searchId} />;
       case "phone":
-        return <PhoneResults data={data} query={query} />;
+        return <PhoneResults data={data} query={query} searchId={searchId} />;
       case "address":
-        return <AddressResults data={data} query={query} />;
+        return <AddressResults data={data} query={query} searchId={searchId} />;
       default:
-        return <KeywordResults data={data} query={query} />;
+        return <KeywordResults data={data} query={query} searchId={searchId} />;
     }
   } catch (error) {
     console.error("Error fetching results:", error);
