@@ -17,7 +17,8 @@ import {
   getBusinessInfo,
 } from "@/lib/api/dataforseo";
 import {
-  withCache,
+  getFromCache,
+  setInCache,
   generateCacheKey,
   CACHE_PREFIX,
   CACHE_TTL,
@@ -27,6 +28,10 @@ import {
   saveKeywordSearchResults,
   saveDomainSearchResults,
   saveBusinessSearchResults,
+  findCachedSearch,
+  reconstructKeywordResponse,
+  reconstructDomainResponse,
+  reconstructBusinessResponse,
 } from "@/lib/db/queries";
 
 export async function POST(request: NextRequest) {
@@ -49,27 +54,71 @@ export async function POST(request: NextRequest) {
     const normalizedQuery = parsed.normalized || query;
     const cacheKey = generateCacheKey(CACHE_PREFIX.SEARCH, inputType, normalizedQuery);
 
-    // Execute search with caching
-    const results = await withCache(
-      cacheKey,
-      inputType === "keyword" ? CACHE_TTL.KEYWORD_DATA : CACHE_TTL.DOMAIN_DATA,
-      async () => {
+    // Three-tier cache: Redis → Supabase DB → DataForSEO API
+    // 1. Check Redis (fast, short TTL)
+    const redisCached = await getFromCache<Record<string, unknown>>(cacheKey);
+
+    let results: Record<string, unknown>;
+    let fromDbCache = false;
+
+    if (redisCached) {
+      results = redisCached;
+    } else {
+      // 2. Check Supabase for a recent result (durable, longer TTL)
+      let dbCachedResults: Record<string, unknown> | null = null;
+      try {
+        const cachedSearch = await findCachedSearch(inputType, normalizedQuery);
+        if (cachedSearch) {
+          switch (inputType) {
+            case "keyword":
+              dbCachedResults = reconstructKeywordResponse(cachedSearch) as Record<string, unknown> | null;
+              break;
+            case "url":
+              dbCachedResults = reconstructDomainResponse(cachedSearch) as Record<string, unknown> | null;
+              break;
+            case "business":
+            case "phone":
+              dbCachedResults = reconstructBusinessResponse(cachedSearch) as Record<string, unknown> | null;
+              break;
+          }
+        }
+      } catch (dbCacheError) {
+        console.warn("DB cache lookup failed, falling through to API:", dbCacheError);
+      }
+
+      if (dbCachedResults) {
+        results = dbCachedResults;
+        fromDbCache = true;
+        // Re-populate Redis so subsequent hits are fast
+        const ttl = inputType === "keyword" ? CACHE_TTL.KEYWORD_DATA : CACHE_TTL.DOMAIN_DATA;
+        setInCache(cacheKey, results, ttl).catch(console.warn);
+      } else {
+        // 3. Hit DataForSEO API (expensive)
         switch (inputType) {
           case "keyword":
-            return await searchKeyword(query);
+            results = await searchKeyword(query);
+            break;
           case "url":
-            return await searchDomain(normalizedQuery);
+            results = await searchDomain(normalizedQuery);
+            break;
           case "business":
-            return await searchBusiness(query);
+            results = await searchBusiness(query);
+            break;
           case "phone":
-            return await searchPhone(query);
+            results = await searchPhone(query);
+            break;
           case "address":
-            return await searchAddress(query);
+            results = await searchAddress(query);
+            break;
           default:
-            return await searchKeyword(query);
+            results = await searchKeyword(query);
         }
+
+        // Cache in Redis
+        const ttl = inputType === "keyword" ? CACHE_TTL.KEYWORD_DATA : CACHE_TTL.DOMAIN_DATA;
+        setInCache(cacheKey, results, ttl).catch(console.warn);
       }
-    );
+    }
 
     // Save search to database if user is logged in
     let searchId: string | null = null;
@@ -83,8 +132,10 @@ export async function POST(request: NextRequest) {
         });
         searchId = savedSearch.id;
 
-        // Save detailed results based on input type
-        await persistSearchResults(searchId, inputType, results, normalizedQuery);
+        // Only persist detailed results if we fetched fresh from API (not from DB cache)
+        if (!fromDbCache) {
+          await persistSearchResults(searchId, inputType, results, normalizedQuery);
+        }
       } catch (dbError) {
         // Log but don't fail the request if DB save fails
         console.error("Failed to save search to database:", dbError);

@@ -197,6 +197,193 @@ export async function deleteSearch(searchId: string, userId: string) {
 }
 
 // ============================================
+// Cached Search Lookup
+// ============================================
+
+// DB cache TTLs (in hours) — how old a cached result can be before we re-fetch
+const DB_CACHE_TTL_HOURS: Record<string, number> = {
+  keyword: 24,
+  url: 12,
+  business: 24,
+  phone: 24,
+  address: 24,
+};
+
+/**
+ * Find a recent search with full data that matches the same query.
+ * Used as a durable cache fallback when Redis misses.
+ * Returns null if no recent result exists within the TTL window.
+ */
+export async function findCachedSearch(
+  inputType: string,
+  normalizedValue: string
+) {
+  const ttlHours = DB_CACHE_TTL_HOURS[inputType] || 24;
+  const cutoff = new Date();
+  cutoff.setHours(cutoff.getHours() - ttlHours);
+
+  // Find the most recent search of this type+value within TTL
+  const recentSearch = await db
+    .select({ id: searches.id })
+    .from(searches)
+    .where(
+      and(
+        eq(searches.inputType, inputType),
+        eq(searches.normalizedValue, normalizedValue),
+        gte(searches.createdAt, cutoff)
+      )
+    )
+    .orderBy(desc(searches.createdAt))
+    .limit(1);
+
+  if (recentSearch.length === 0) return null;
+
+  // Load full data for that search
+  return getSearchWithData(recentSearch[0].id);
+}
+
+/**
+ * Reconstruct keyword search API response from cached DB data
+ */
+export function reconstructKeywordResponse(
+  cachedSearch: NonNullable<Awaited<ReturnType<typeof getSearchWithData>>>
+) {
+  const kd = cachedSearch.keywordData?.[0];
+  if (!kd) return null;
+
+  return {
+    keyword: {
+      keyword: kd.keyword,
+      searchVolume: kd.searchVolume,
+      cpcLow: kd.cpcLow ? parseFloat(kd.cpcLow) : null,
+      cpcHigh: kd.cpcHigh ? parseFloat(kd.cpcHigh) : null,
+      cpcAvg: kd.cpcAvg ? parseFloat(kd.cpcAvg) : null,
+      competition: kd.competition ? parseFloat(kd.competition) : null,
+      difficulty: kd.difficulty,
+      monthlySearches: (kd.trendData as Array<{ month: number; year: number; search_volume: number }>) || [],
+    },
+    relatedKeywords: (kd.relatedKeywords || []).map((rk) => ({
+      keyword: rk.keyword,
+      searchVolume: rk.searchVolume,
+      cpc: rk.cpc ? parseFloat(rk.cpc) : null,
+      type: rk.keywordType || "related",
+    })),
+    autocomplete: [],
+    intent: kd.searchIntent
+      ? { label: kd.searchIntent, probability: 0 }
+      : null,
+    topUrls: [],
+  };
+}
+
+/**
+ * Reconstruct domain search API response from cached DB data
+ */
+export function reconstructDomainResponse(
+  cachedSearch: NonNullable<Awaited<ReturnType<typeof getSearchWithData>>>
+) {
+  const dd = cachedSearch.domainData?.[0];
+  if (!dd) return null;
+
+  const pd = cachedSearch.pageData?.[0];
+
+  return {
+    domain: {
+      domain: dd.domain,
+      domainRank: dd.domainRank,
+      organicTraffic: dd.organicTraffic,
+      organicKeywords: dd.organicKeywordsCount || 0,
+    },
+    backlinks: {
+      total: dd.backlinkCount || 0,
+      referringDomains: dd.referringDomains || 0,
+      dofollow: 0,
+      nofollow: 0,
+    },
+    rankedKeywords: (dd.rankedKeywords || []).map((kw) => ({
+      keyword: kw.keyword,
+      position: kw.position || 0,
+      searchVolume: kw.searchVolume,
+      url: kw.url || "",
+    })),
+    competitors: ((dd.competitorDomains as Array<{ domain: string; intersections: number; avgPosition: number }>) || []),
+    lighthouse: pd
+      ? {
+          performance: pd.lighthousePerformance || 0,
+          accessibility: pd.lighthouseAccessibility || 0,
+          bestPractices: pd.lighthouseBestPractices || 0,
+          seo: pd.lighthouseSeo || 0,
+        }
+      : null,
+    pageAnalysis: pd
+      ? {
+          title: pd.title || "",
+          metaDescription: pd.metaDescription || "",
+          wordCount: pd.wordCount || 0,
+          internalLinks: pd.internalLinks || 0,
+          externalLinks: pd.externalLinks || 0,
+          images: pd.images || 0,
+        }
+      : null,
+    whois: (dd.whoisData as {
+      registrar: string;
+      createdDate: string;
+      expiryDate: string;
+      nameServers: string[];
+    }) || null,
+  };
+}
+
+/**
+ * Reconstruct business search API response from cached DB data
+ */
+export function reconstructBusinessResponse(
+  cachedSearch: NonNullable<Awaited<ReturnType<typeof getSearchWithData>>>
+) {
+  const bd = cachedSearch.businessData?.[0];
+  if (!bd) return null;
+
+  return {
+    business: {
+      name: bd.businessName || "",
+      address: bd.address || "",
+      city: bd.city || "",
+      state: bd.state || "",
+      zip: bd.zip || "",
+      phone: bd.phone || "",
+      website: bd.website || "",
+      category: bd.category || "",
+      rating: bd.googleRating ? parseFloat(bd.googleRating) : null,
+      reviewCount: bd.googleReviewCount,
+      latitude: null,
+      longitude: null,
+      placeId: null,
+      cid: null,
+      hours: null,
+    },
+    reviews: bd.recentReviews
+      ? {
+          rating: bd.googleRating ? parseFloat(bd.googleRating) : 0,
+          totalReviews: bd.googleReviewCount || 0,
+          reviews: bd.recentReviews as Array<{
+            author: string;
+            rating: number;
+            text: string;
+            date: string;
+            profileImage: string | null;
+          }>,
+          sentiment: (bd.reviewSentiment as {
+            positive: number;
+            negative: number;
+            neutral: number;
+          }) || { positive: 0, negative: 0, neutral: 0 },
+        }
+      : null,
+    maps: [],
+  };
+}
+
+// ============================================
 // Keyword Data Operations
 // ============================================
 
