@@ -457,38 +457,28 @@ async function searchBusiness(businessName: string) {
   // Get the first maps item for location data
   const firstMapsItem = maps?.items?.[0];
 
-  // Use first maps result if no direct business match
-  const primaryBusiness = business || (firstMapsItem ? {
-    title: firstMapsItem.title,
-    address: firstMapsItem.address,
-    address_info: firstMapsItem.address_info,
-    phone: firstMapsItem.phone,
-    url: firstMapsItem.url,
-    category: firstMapsItem.category,
-    rating: firstMapsItem.rating,
-    latitude: firstMapsItem.latitude,
-    longitude: firstMapsItem.longitude,
-    place_id: firstMapsItem.place_id,
-    cid: firstMapsItem.cid,
-  } : null);
+  // Merge business info with maps data — BusinessInfo API often returns sparse results,
+  // so we fill gaps from the richer Google Maps data
+  const biz = business;
+  const mp = firstMapsItem;
 
   return {
-    business: primaryBusiness
+    business: (biz || mp)
       ? {
-          name: primaryBusiness.title || businessName,
-          address: primaryBusiness.address || "",
-          city: primaryBusiness.address_info?.city || "",
-          state: primaryBusiness.address_info?.region || "",
-          zip: primaryBusiness.address_info?.zip || "",
-          phone: primaryBusiness.phone || "",
-          website: primaryBusiness.url || "",
-          category: primaryBusiness.category || "",
-          rating: primaryBusiness.rating?.value || null,
-          reviewCount: primaryBusiness.rating?.votes_count || null,
-          latitude: primaryBusiness.latitude || firstMapsItem?.latitude || null,
-          longitude: primaryBusiness.longitude || firstMapsItem?.longitude || null,
-          placeId: primaryBusiness.place_id || firstMapsItem?.place_id || null,
-          cid: primaryBusiness.cid || firstMapsItem?.cid || null,
+          name: biz?.title || mp?.title || businessName,
+          address: biz?.address || mp?.address || "",
+          city: biz?.address_info?.city || mp?.address_info?.city || "",
+          state: biz?.address_info?.region || mp?.address_info?.region || "",
+          zip: biz?.address_info?.zip || mp?.address_info?.zip || "",
+          phone: biz?.phone || mp?.phone || "",
+          website: biz?.url || mp?.url || "",
+          category: biz?.category || mp?.category || "",
+          rating: biz?.rating?.value ?? mp?.rating?.value ?? null,
+          reviewCount: biz?.rating?.votes_count ?? mp?.rating?.votes_count ?? null,
+          latitude: biz?.latitude || mp?.latitude || null,
+          longitude: biz?.longitude || mp?.longitude || null,
+          placeId: biz?.place_id || mp?.place_id || null,
+          cid: biz?.cid || mp?.cid || null,
           hours: null,
         }
       : null,
