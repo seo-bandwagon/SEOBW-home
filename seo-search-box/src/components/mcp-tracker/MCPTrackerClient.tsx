@@ -57,7 +57,7 @@ const MOCK_HISTORY = [
 ];
 
 export function MCPTrackerClient() {
-  const [keywords, setKeywords] = useState<KeywordRanking[]>(MOCK_KEYWORDS);
+  const [keywords] = useState<KeywordRanking[]>(MOCK_KEYWORDS);
   const [history] = useState(MOCK_HISTORY);
   const [loading, setLoading] = useState(false);
   const [sortBy, setSortBy] = useState<"position" | "impressions" | "clicks">("position");
@@ -279,7 +279,7 @@ export function MCPTrackerClient() {
                     {kw.clicks.toLocaleString()}
                   </td>
                   <td className="py-4 px-4 text-right text-sm text-slate-300">
-                    {((kw.clicks / kw.impressions) * 100).toFixed(1)}%
+                    {kw.impressions > 0 ? ((kw.clicks / kw.impressions) * 100).toFixed(1) : "0.0"}%
                   </td>
                 </tr>
               ))}
@@ -295,10 +295,9 @@ export function MCPTrackerClient() {
           <div>
             <h3 className="text-lg font-semibold text-white mb-2">About This Dashboard</h3>
             <p className="text-slate-400 text-sm leading-relaxed">
-              This dashboard shows real Google Search Console data for mastercontrolpress.com. 
-              We built Master Control Press to prove that AI-powered WordPress development works. 
-              Instead of just telling you SEO works, we&apos;re showing you the receipts. 
-              Data refreshes daily from GSC.
+              This dashboard will show real Google Search Console data for mastercontrolpress.com once connected. 
+              Currently displaying demo data. We built Master Control Press to prove that AI-powered WordPress development works. 
+              Once live, data will refresh daily from GSC.
             </p>
           </div>
         </div>

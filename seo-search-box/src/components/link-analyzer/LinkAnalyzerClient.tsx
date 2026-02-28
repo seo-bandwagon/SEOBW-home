@@ -119,7 +119,7 @@ export function LinkAnalyzerClient() {
   const anchorBarData = result
     ? result.anchorTextDistribution.slice(0, 6).map((item) => ({
         name: item.text.length > 12 ? item.text.slice(0, 12) + "..." : item.text,
-        fullName: item.text,
+        
         count: item.count,
       }))
     : [];

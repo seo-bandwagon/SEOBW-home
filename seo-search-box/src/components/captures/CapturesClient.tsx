@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   FileSearch,
   Globe,
@@ -128,7 +128,7 @@ export function CapturesClient() {
   // Calculate stats
   const stats: CaptureStats = {
     totalCaptures: captures.length,
-    avgScore: Math.round(captures.reduce((sum, c) => sum + c.seoScore, 0) / captures.length),
+    avgScore: captures.length > 0 ? Math.round(captures.reduce((sum, c) => sum + c.seoScore, 0) / captures.length) : 0,
     topDomains: Object.entries(
       captures.reduce((acc, c) => {
         acc[c.domain] = (acc[c.domain] || 0) + 1;
