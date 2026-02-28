@@ -25,5 +25,5 @@ export default function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/history/:path*", "/saved-searches/:path*"],
+  matcher: ["/dashboard/:path*", "/history/:path*", "/saved-searches/:path*", "/captures/:path*"],
 };
