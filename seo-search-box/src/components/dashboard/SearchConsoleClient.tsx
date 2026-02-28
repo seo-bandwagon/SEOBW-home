@@ -120,9 +120,9 @@ export function SearchConsoleClient({ userEmail }: SearchConsoleClientProps) {
     setLoading(true);
     try {
       const [queriesRes, pagesRes, trendRes] = await Promise.all([
-        fetch(`${API_BASE}/gsc/queries?email=${encodeURIComponent(userEmail)}&siteUrl=${encodeURIComponent(selectedSite)}`),
-        fetch(`${API_BASE}/gsc/pages?email=${encodeURIComponent(userEmail)}&siteUrl=${encodeURIComponent(selectedSite)}`),
-        fetch(`${API_BASE}/gsc/trend?email=${encodeURIComponent(userEmail)}&siteUrl=${encodeURIComponent(selectedSite)}`),
+        fetch(`${API_BASE}/gsc/queries?email=${encodeURIComponent(userEmail)}&site=${encodeURIComponent(selectedSite)}`),
+        fetch(`${API_BASE}/gsc/pages?email=${encodeURIComponent(userEmail)}&site=${encodeURIComponent(selectedSite)}`),
+        fetch(`${API_BASE}/gsc/performance?email=${encodeURIComponent(userEmail)}&site=${encodeURIComponent(selectedSite)}`),
       ]);
 
       const [queriesData, pagesData, trendData] = await Promise.all([
@@ -133,7 +133,7 @@ export function SearchConsoleClient({ userEmail }: SearchConsoleClientProps) {
 
       setQueries(queriesData.queries || []);
       setPages(pagesData.pages || []);
-      setTrend(trendData.trend || []);
+      setTrend(trendData.performance || []);
       setError(null);
     } catch (err) {
       setError("Failed to load Search Console data");
