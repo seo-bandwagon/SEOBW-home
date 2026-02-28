@@ -59,7 +59,7 @@ export async function queryMapsPoint(
     body: JSON.stringify([
       {
         keyword,
-        location_coordinate: `${lat},${lng},15`,
+        location_coordinate: `${lat.toFixed(6)},${lng.toFixed(6)},15`,
         language_code: "en",
         device: "desktop",
         os: "windows",
@@ -67,6 +67,10 @@ export async function queryMapsPoint(
       },
     ]),
   });
+
+  if (!response.ok) {
+    throw new Error(`DataForSEO API error: ${response.status} ${response.statusText}`);
+  }
 
   const data: DataForSEOResponse = await response.json();
 
@@ -89,11 +93,59 @@ export async function queryMapsPoint(
 /**
  * Search for a business by name and location
  */
+/**
+ * US state abbreviation → full name mapping for location normalization.
+ */
+const US_STATES: Record<string, string> = {
+  AL: "Alabama", AK: "Alaska", AZ: "Arizona", AR: "Arkansas", CA: "California",
+  CO: "Colorado", CT: "Connecticut", DE: "Delaware", FL: "Florida", GA: "Georgia",
+  HI: "Hawaii", ID: "Idaho", IL: "Illinois", IN: "Indiana", IA: "Iowa",
+  KS: "Kansas", KY: "Kentucky", LA: "Louisiana", ME: "Maine", MD: "Maryland",
+  MA: "Massachusetts", MI: "Michigan", MN: "Minnesota", MS: "Mississippi",
+  MO: "Missouri", MT: "Montana", NE: "Nebraska", NV: "Nevada", NH: "New Hampshire",
+  NJ: "New Jersey", NM: "New Mexico", NY: "New York", NC: "North Carolina",
+  ND: "North Dakota", OH: "Ohio", OK: "Oklahoma", OR: "Oregon", PA: "Pennsylvania",
+  RI: "Rhode Island", SC: "South Carolina", SD: "South Dakota", TN: "Tennessee",
+  TX: "Texas", UT: "Utah", VT: "Vermont", VA: "Virginia", WA: "Washington",
+  WV: "West Virginia", WI: "Wisconsin", WY: "Wyoming", DC: "District of Columbia",
+};
+
+/**
+ * Normalize a user-friendly location string (e.g. "Seattle, WA") to
+ * DataForSEO's expected format: "City,State,United States"
+ */
+function normalizeLocation(input: string): string {
+  // Already in DataForSEO format (contains "United States")
+  if (input.includes("United States")) return input;
+
+  // Try to match "City, ST" or "City, State" patterns
+  const match = input.match(/^(.+?)[,\s]+([A-Z]{2})$/i);
+  if (match) {
+    const city = match[1].trim();
+    const stateAbbr = match[2].toUpperCase();
+    const stateName = US_STATES[stateAbbr];
+    if (stateName) {
+      return `${city},${stateName},United States`;
+    }
+  }
+
+  // Try zip code pattern — just append United States
+  if (/^\d{5}(-\d{4})?$/.test(input.trim())) {
+    return input.trim();
+  }
+
+  // Fallback: append United States if not already present
+  return `${input},United States`;
+}
+
 export async function findBusiness(
   keyword: string,
   businessName: string,
   location: string
 ): Promise<MapsSearchResult | null> {
+  // Normalize user-friendly location to DataForSEO format
+  const resolvedLocation = normalizeLocation(location);
+
   const response = await fetch("https://api.dataforseo.com/v3/serp/google/maps/live/advanced", {
     method: "POST",
     headers: {
@@ -103,7 +155,7 @@ export async function findBusiness(
     body: JSON.stringify([
       {
         keyword: `${keyword} ${businessName}`,
-        location_name: location,
+        location_name: resolvedLocation,
         language_code: "en",
         device: "desktop",
         os: "windows",
@@ -236,37 +288,61 @@ export async function runGridScan(
   const { gridSize = 5, radiusMiles = 5, delayMs = 100 } = options;
 
   const grid = generateGrid(centerLat, centerLng, gridSize, radiusMiles);
-  const results: GridScanResult[] = [];
+  const results: GridScanResult[] = new Array(grid.length);
 
-  for (const point of grid) {
-    try {
-      const mapResults = await queryMapsPoint(keyword, point.lat, point.lng);
-      const { rank, item } = findBusinessRank(mapResults, businessName, placeId);
+  // Run grid point requests with bounded concurrency to avoid long sequential runtimes.
+  const MAX_CONCURRENCY = 3;
+  const concurrency = Math.min(MAX_CONCURRENCY, grid.length || 1);
+  let currentIndex = 0;
 
-      const topOrganic = mapResults.find((r) => r.type !== "maps_paid_item");
+  const workers: Promise<void>[] = [];
 
-      results.push({
-        ...point,
-        rank,
-        topResult: topOrganic?.title || null,
-        businessFound: item?.title || null,
-      });
-
-      // Rate limiting
-      if (delayMs > 0) {
-        await new Promise((r) => setTimeout(r, delayMs));
+  const runWorker = async () => {
+    // Each worker processes multiple grid points in sequence.
+    // This preserves the existing rate-limiting delay while allowing
+    // several points to be processed in parallel.
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      const index = currentIndex++;
+      if (index >= grid.length) {
+        return;
       }
-    } catch (err) {
-      console.error(`Error at point (${point.row},${point.col}):`, err);
-      results.push({
-        ...point,
-        rank: null,
-        topResult: null,
-        businessFound: null,
-      });
+
+      const point = grid[index];
+      try {
+        const mapResults = await queryMapsPoint(keyword, point.lat, point.lng);
+        const { rank, item } = findBusinessRank(mapResults, businessName, placeId);
+
+        const topOrganic = mapResults.find((r) => r.type !== "maps_paid_item");
+
+        results[index] = {
+          ...point,
+          rank,
+          topResult: topOrganic?.title || null,
+          businessFound: item?.title || null,
+        };
+
+        // Rate limiting
+        if (delayMs > 0) {
+          await new Promise((r) => setTimeout(r, delayMs));
+        }
+      } catch (err) {
+        console.error(`Error at point (${point.row},${point.col}):`, err);
+        results[index] = {
+          ...point,
+          rank: null,
+          topResult: null,
+          businessFound: null,
+        };
+      }
     }
+  };
+
+  for (let i = 0; i < concurrency; i++) {
+    workers.push(runWorker());
   }
 
+  await Promise.all(workers);
   // Calculate stats
   const ranks = results.map((r) => r.rank).filter((r): r is number => r !== null);
   const averageRank =

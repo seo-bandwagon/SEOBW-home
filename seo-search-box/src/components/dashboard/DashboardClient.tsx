@@ -169,7 +169,7 @@ export function DashboardClient({
           <span className="text-white font-medium">View History</span>
         </Link>
         <Link
-          href="/saved"
+          href="/saved-searches"
           className="flex items-center gap-3 p-4 rounded-xl bg-slate-800 border border-slate-700 hover:border-slate-600 transition-colors"
         >
           <Bookmark className="h-6 w-6 text-slate-400" />
@@ -300,7 +300,7 @@ export function DashboardClient({
                 return (
                   <Link
                     key={search.id}
-                    href={`/results?q=${encodeURIComponent(search.inputValue)}&type=${search.inputType}`}
+                    href={`/results/${search.id}`}
                     className="flex items-center justify-between p-3 rounded-lg bg-slate-700/30 hover:bg-slate-700/50 transition-colors"
                   >
                     <div className="flex items-center gap-3">

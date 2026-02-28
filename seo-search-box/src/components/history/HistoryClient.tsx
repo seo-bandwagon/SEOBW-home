@@ -12,10 +12,10 @@ import {
   ArrowLeft,
   Filter,
   Trash2,
-  Download,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ExportButton } from "@/components/common/ExportButton";
 
 interface SearchRecord {
   id: string;
@@ -119,24 +119,6 @@ export function HistoryClient({ searches }: HistoryClientProps) {
     setSelectedTypes([]);
   };
 
-  const exportToCSV = () => {
-    const headers = ["Type", "Value", "Date"];
-    const rows = filteredSearches.map((s) => [
-      s.inputType,
-      s.inputValue,
-      new Date(s.createdAt).toISOString(),
-    ]);
-
-    const csv = [headers, ...rows].map((row) => row.join(",")).join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `search-history-${new Date().toISOString().split("T")[0]}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
   const hasActiveFilters = searchQuery !== "" || selectedTypes.length > 0;
 
   return (
@@ -160,14 +142,7 @@ export function HistoryClient({ searches }: HistoryClientProps) {
         </div>
 
         <div className="flex items-center gap-2">
-          <button
-            onClick={exportToCSV}
-            disabled={filteredSearches.length === 0}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 hover:border-slate-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Download className="h-4 w-4 text-slate-400" />
-            <span className="text-sm text-slate-300">Export</span>
-          </button>
+          <ExportButton bulk label="Export All" />
         </div>
       </div>
 
@@ -263,7 +238,7 @@ export function HistoryClient({ searches }: HistoryClientProps) {
                   return (
                     <Link
                       key={search.id}
-                      href={`/results?q=${encodeURIComponent(search.inputValue)}&type=${search.inputType}`}
+                      href={`/results/${search.id}`}
                       className="flex items-center justify-between p-4 rounded-xl bg-slate-800/50 border border-slate-700 hover:border-slate-600 transition-colors group"
                     >
                       <div className="flex items-center gap-4">

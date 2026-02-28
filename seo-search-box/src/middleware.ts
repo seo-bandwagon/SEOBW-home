@@ -1,27 +1,29 @@
-import { auth } from "@/lib/auth";
 import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 
-export default auth((req) => {
-  const isLoggedIn = !!req.auth;
+/**
+ * Lightweight auth guard — checks for the session cookie only.
+ * Actual session validation happens server-side in page/route handlers.
+ * We avoid importing `auth` here because the DrizzleAdapter uses the
+ * postgres driver which requires Node.js `net` (unavailable in Edge Runtime).
+ */
+export default function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Protected routes that require authentication
-  const protectedRoutes = ["/dashboard", "/history", "/saved-searches", "/captures"];
-  const isProtectedRoute = protectedRoutes.some((route) =>
-    pathname.startsWith(route)
-  );
+  // Check for NextAuth session cookie (Secure prefix used in production)
+  const hasSession =
+    req.cookies.has("__Secure-authjs.session-token") ||
+    req.cookies.has("authjs.session-token");
 
-  // If route is protected and user is not logged in, redirect to sign in
-  if (isProtectedRoute && !isLoggedIn) {
+  if (!hasSession) {
     const signInUrl = new URL("/auth/signin", req.url);
     signInUrl.searchParams.set("callbackUrl", pathname);
     return NextResponse.redirect(signInUrl);
   }
 
   return NextResponse.next();
-});
+}
 
 export const config = {
-  // Only run middleware on protected routes
-  matcher: ["/dashboard/:path*", "/history/:path*", "/saved-searches/:path*"],
+  matcher: ["/dashboard/:path*", "/history/:path*", "/saved-searches/:path*", "/captures/:path*"],
 };

@@ -207,13 +207,13 @@ export function PlaceIdLookup() {
                 {/* Actions */}
                 <div className="mt-4 pt-4 border-t border-slate-600 flex gap-2 flex-wrap">
                   <a
-                    href={`/tools/local-rank?lat=${place.lat}&lng=${place.lng}&placeId=${place.placeId}`}
+                    href={`/tools/local-rank?lat=${encodeURIComponent(String(place.lat))}&lng=${encodeURIComponent(String(place.lng))}&placeId=${encodeURIComponent(place.placeId)}`}
                     className="text-sm bg-pink-500/10 text-pink-400 px-3 py-1.5 rounded-full hover:bg-pink-500/20 transition-colors"
                   >
                     Check Local Rankings →
                   </a>
                   <a
-                    href={`https://www.google.com/maps/place/?q=place_id:${place.placeId}`}
+                    href={`https://www.google.com/maps/place/?q=place_id:${encodeURIComponent(place.placeId)}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-sm bg-blue-500/10 text-blue-400 px-3 py-1.5 rounded-full hover:bg-blue-500/20 transition-colors"

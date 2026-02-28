@@ -44,6 +44,24 @@ export async function POST(request: NextRequest) {
       const lat = parseFloat(match[1]);
       const lng = parseFloat(match[2]);
 
+      // Validate coordinate ranges and finiteness before calling Google
+      if (
+        !Number.isFinite(lat) ||
+        !Number.isFinite(lng) ||
+        lat < -90 ||
+        lat > 90 ||
+        lng < -180 ||
+        lng > 180
+      ) {
+        return NextResponse.json(
+          {
+            error: "Invalid coordinates",
+            message:
+              "Latitude must be between -90 and 90 and longitude between -180 and 180",
+          },
+          { status: 400 }
+        );
+      }
       url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${GOOGLE_MAPS_API_KEY}`;
     } else {
       // Forward geocode (address to coordinates)
@@ -51,6 +69,29 @@ export async function POST(request: NextRequest) {
     }
 
     const response = await fetch(url);
+
+    if (!response.ok) {
+      let errorBody = "";
+      try {
+        errorBody = await response.text();
+      } catch {
+        // ignore body read errors
+      }
+
+      console.error("Geocode upstream HTTP error:", {
+        status: response.status,
+        statusText: response.statusText,
+        body: errorBody,
+      });
+
+      return NextResponse.json(
+        {
+          error: "Geocoding service error",
+          message: "Upstream geocoding request failed",
+        },
+        { status: 502 }
+      );
+    }
     const data = await response.json();
 
     if (data.status === "ZERO_RESULTS") {

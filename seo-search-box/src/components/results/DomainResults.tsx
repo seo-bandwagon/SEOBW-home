@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { cn, formatNumber, getScoreColor, formatRelativeDate } from "@/lib/utils";
 import { LighthouseGauge } from "../charts/LighthouseGauge";
+import { SaveSearchButton } from "./SaveSearchButton";
 
 interface DomainResultsProps {
   data: {
@@ -25,6 +26,7 @@ interface DomainResultsProps {
     whois: WhoisData | null;
   };
   query: string;
+  searchId?: string | null;
 }
 
 interface DomainData {
@@ -77,11 +79,16 @@ interface WhoisData {
   nameServers: string[];
 }
 
-export function DomainResults({ data, query }: DomainResultsProps) {
+export function DomainResults({ data, query, searchId }: DomainResultsProps) {
   const { domain, backlinks, rankedKeywords, competitors, lighthouse, pageAnalysis, whois } = data;
 
   return (
     <div className="space-y-6">
+      {/* Save Button */}
+      <div className="flex justify-end">
+        <SaveSearchButton searchId={searchId ?? null} query={query} />
+      </div>
+
       {/* Main Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard

@@ -6,13 +6,13 @@ import { z } from "zod";
 const LocalRankRequestSchema = z.object({
   keyword: z.string().min(1),
   // Location can be provided in multiple ways:
-  lat: z.number().optional(),
-  lng: z.number().optional(),
+  lat: z.number().min(-90).max(90).optional(),
+  lng: z.number().min(-180).max(180).optional(),
   placeId: z.string().optional(),
   businessName: z.string().optional(),
   location: z.string().optional(), // City/state for business lookup
   // Grid options
-  gridSize: z.number().min(3).max(9).default(5),
+  gridSize: z.number().int().min(3).max(9).default(5),
   radiusMiles: z.number().min(1).max(25).default(5),
 });
 

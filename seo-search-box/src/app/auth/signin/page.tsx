@@ -1,15 +1,17 @@
 "use client";
 
+import { signIn } from "next-auth/react";
+import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 import { Search } from "lucide-react";
 import { Navbar } from "@/components/common/Navbar";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.seobandwagon.dev";
+function SignInContent() {
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
 
-export default function SignInPage() {
   const handleGoogleLogin = () => {
-    // Redirect to API server for OAuth, with callback to dashboard
-    const redirectUrl = encodeURIComponent(window.location.origin + "/auth/callback");
-    window.location.href = `${API_URL}/auth/google?redirect=${redirectUrl}`;
+    signIn("google", { callbackUrl });
   };
 
   return (
@@ -64,6 +66,18 @@ export default function SignInPage() {
       </div>
       </div>
     </div>
+  );
+}
+
+export default function SignInPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
+        <div className="text-slate-400">Loading...</div>
+      </div>
+    }>
+      <SignInContent />
+    </Suspense>
   );
 }
 

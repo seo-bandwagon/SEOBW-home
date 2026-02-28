@@ -6,6 +6,8 @@ import { Loader2, MapPin, Search, Building2 } from "lucide-react";
 interface LocalRankFormProps {
   onSubmit: (data: LocalRankFormData) => void;
   isLoading?: boolean;
+  initialBusinessName?: string;
+  initialLocation?: string;
 }
 
 export interface LocalRankFormData {
@@ -16,10 +18,10 @@ export interface LocalRankFormData {
   radiusMiles: number;
 }
 
-export function LocalRankForm({ onSubmit, isLoading }: LocalRankFormProps) {
+export function LocalRankForm({ onSubmit, isLoading, initialBusinessName, initialLocation }: LocalRankFormProps) {
   const [keyword, setKeyword] = useState("");
-  const [businessName, setBusinessName] = useState("");
-  const [location, setLocation] = useState("");
+  const [businessName, setBusinessName] = useState(initialBusinessName || "");
+  const [location, setLocation] = useState(initialLocation || "");
   const [gridSize, setGridSize] = useState(5);
   const [radiusMiles, setRadiusMiles] = useState(5);
 

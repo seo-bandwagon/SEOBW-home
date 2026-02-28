@@ -241,3 +241,4 @@ SUPABASE_SERVICE_KEY      # Supabase service role key
 - Database changes require running `npm run db:push` after modifying schema
 - Input parser uses regex with confidence scoring - maintain this pattern for new input types
 - Respect the existing dark theme with slate colors
+

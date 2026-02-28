@@ -17,7 +17,8 @@ import {
   getBusinessInfo,
 } from "@/lib/api/dataforseo";
 import {
-  withCache,
+  getFromCache,
+  setInCache,
   generateCacheKey,
   CACHE_PREFIX,
   CACHE_TTL,
@@ -27,6 +28,10 @@ import {
   saveKeywordSearchResults,
   saveDomainSearchResults,
   saveBusinessSearchResults,
+  findCachedSearch,
+  reconstructKeywordResponse,
+  reconstructDomainResponse,
+  reconstructBusinessResponse,
 } from "@/lib/db/queries";
 
 export async function POST(request: NextRequest) {
@@ -49,27 +54,71 @@ export async function POST(request: NextRequest) {
     const normalizedQuery = parsed.normalized || query;
     const cacheKey = generateCacheKey(CACHE_PREFIX.SEARCH, inputType, normalizedQuery);
 
-    // Execute search with caching
-    const results = await withCache(
-      cacheKey,
-      inputType === "keyword" ? CACHE_TTL.KEYWORD_DATA : CACHE_TTL.DOMAIN_DATA,
-      async () => {
+    // Three-tier cache: Redis → Supabase DB → DataForSEO API
+    // 1. Check Redis (fast, short TTL)
+    const redisCached = await getFromCache<Record<string, unknown>>(cacheKey);
+
+    let results: Record<string, unknown>;
+    let fromDbCache = false;
+
+    if (redisCached) {
+      results = redisCached;
+    } else {
+      // 2. Check Supabase for a recent result (durable, longer TTL)
+      let dbCachedResults: Record<string, unknown> | null = null;
+      try {
+        const cachedSearch = await findCachedSearch(inputType, normalizedQuery);
+        if (cachedSearch) {
+          switch (inputType) {
+            case "keyword":
+              dbCachedResults = reconstructKeywordResponse(cachedSearch) as Record<string, unknown> | null;
+              break;
+            case "url":
+              dbCachedResults = reconstructDomainResponse(cachedSearch) as Record<string, unknown> | null;
+              break;
+            case "business":
+            case "phone":
+              dbCachedResults = reconstructBusinessResponse(cachedSearch) as Record<string, unknown> | null;
+              break;
+          }
+        }
+      } catch (dbCacheError) {
+        console.warn("DB cache lookup failed, falling through to API:", dbCacheError);
+      }
+
+      if (dbCachedResults) {
+        results = dbCachedResults;
+        fromDbCache = true;
+        // Re-populate Redis so subsequent hits are fast
+        const ttl = inputType === "keyword" ? CACHE_TTL.KEYWORD_DATA : CACHE_TTL.DOMAIN_DATA;
+        setInCache(cacheKey, results, ttl).catch(console.warn);
+      } else {
+        // 3. Hit DataForSEO API (expensive)
         switch (inputType) {
           case "keyword":
-            return await searchKeyword(query);
+            results = await searchKeyword(query);
+            break;
           case "url":
-            return await searchDomain(normalizedQuery);
+            results = await searchDomain(normalizedQuery);
+            break;
           case "business":
-            return await searchBusiness(query);
+            results = await searchBusiness(query);
+            break;
           case "phone":
-            return await searchPhone(query);
+            results = await searchPhone(query);
+            break;
           case "address":
-            return await searchAddress(query);
+            results = await searchAddress(query);
+            break;
           default:
-            return await searchKeyword(query);
+            results = await searchKeyword(query);
         }
+
+        // Cache in Redis
+        const ttl = inputType === "keyword" ? CACHE_TTL.KEYWORD_DATA : CACHE_TTL.DOMAIN_DATA;
+        setInCache(cacheKey, results, ttl).catch(console.warn);
       }
-    );
+    }
 
     // Save search to database if user is logged in
     let searchId: string | null = null;
@@ -83,8 +132,10 @@ export async function POST(request: NextRequest) {
         });
         searchId = savedSearch.id;
 
-        // Save detailed results based on input type
-        await persistSearchResults(searchId, inputType, results, normalizedQuery);
+        // Only persist detailed results if we fetched fresh from API (not from DB cache)
+        if (!fromDbCache) {
+          await persistSearchResults(searchId, inputType, results, normalizedQuery);
+        }
       } catch (dbError) {
         // Log but don't fail the request if DB save fails
         console.error("Failed to save search to database:", dbError);
@@ -318,21 +369,25 @@ async function searchKeyword(keyword: string) {
     ? autocompleteData.value?.items?.map((item) => item.suggestion) || []
     : [];
 
+  // NOTE: DataForSEO Google Ads search_volume/live returns keyword metrics at the
+  // ROOT level of each result (e.g. volume.search_volume), not nested under keyword_info.
+  // Verified against live API on 2026-02-21.
   return {
     keyword: {
       keyword,
-      searchVolume: volume?.keyword_info?.search_volume || null,
-      cpcLow: volume?.keyword_info?.low_top_of_page_bid || null,
-      cpcHigh: volume?.keyword_info?.high_top_of_page_bid || null,
-      cpcAvg: volume?.keyword_info?.cpc || null,
-      competition: volume?.keyword_info?.competition || null,
+      searchVolume: volume?.search_volume ?? null,
+      cpcLow: volume?.low_top_of_page_bid ?? null,
+      cpcHigh: volume?.high_top_of_page_bid ?? null,
+      cpcAvg: volume?.cpc ?? null,
+      competition: volume?.competition ?? null,
       difficulty: null, // Would need separate API call
-      monthlySearches: volume?.keyword_info?.monthly_searches || [],
+      monthlySearches: volume?.monthly_searches || [],
     },
+    // NOTE: keywords_for_keywords/live also returns metrics at root level, not under keyword_info.
     relatedKeywords: related.slice(0, 50).map((kw) => ({
       keyword: kw.keyword,
-      searchVolume: kw.keyword_info?.search_volume || null,
-      cpc: kw.keyword_info?.cpc || null,
+      searchVolume: kw.search_volume ?? null,
+      cpc: kw.cpc ?? null,
       type: "related",
     })),
     autocomplete,
@@ -453,38 +508,28 @@ async function searchBusiness(businessName: string) {
   // Get the first maps item for location data
   const firstMapsItem = maps?.items?.[0];
 
-  // Use first maps result if no direct business match
-  const primaryBusiness = business || (firstMapsItem ? {
-    title: firstMapsItem.title,
-    address: firstMapsItem.address,
-    address_info: firstMapsItem.address_info,
-    phone: firstMapsItem.phone,
-    url: firstMapsItem.url,
-    category: firstMapsItem.category,
-    rating: firstMapsItem.rating,
-    latitude: firstMapsItem.latitude,
-    longitude: firstMapsItem.longitude,
-    place_id: firstMapsItem.place_id,
-    cid: firstMapsItem.cid,
-  } : null);
+  // Merge business info with maps data — BusinessInfo API often returns sparse results,
+  // so we fill gaps from the richer Google Maps data
+  const biz = business;
+  const mp = firstMapsItem;
 
   return {
-    business: primaryBusiness
+    business: (biz || mp)
       ? {
-          name: primaryBusiness.title || businessName,
-          address: primaryBusiness.address || "",
-          city: primaryBusiness.address_info?.city || "",
-          state: primaryBusiness.address_info?.region || "",
-          zip: primaryBusiness.address_info?.zip || "",
-          phone: primaryBusiness.phone || "",
-          website: primaryBusiness.url || "",
-          category: primaryBusiness.category || "",
-          rating: primaryBusiness.rating?.value || null,
-          reviewCount: primaryBusiness.rating?.votes_count || null,
-          latitude: primaryBusiness.latitude || firstMapsItem?.latitude || null,
-          longitude: primaryBusiness.longitude || firstMapsItem?.longitude || null,
-          placeId: primaryBusiness.place_id || firstMapsItem?.place_id || null,
-          cid: primaryBusiness.cid || firstMapsItem?.cid || null,
+          name: biz?.title || mp?.title || businessName,
+          address: biz?.address || mp?.address || "",
+          city: biz?.address_info?.city || mp?.address_info?.city || "",
+          state: biz?.address_info?.region || mp?.address_info?.region || "",
+          zip: biz?.address_info?.zip || mp?.address_info?.zip || "",
+          phone: biz?.phone || mp?.phone || "",
+          website: biz?.url || mp?.url || "",
+          category: biz?.category || mp?.category || "",
+          rating: biz?.rating?.value ?? mp?.rating?.value ?? null,
+          reviewCount: biz?.rating?.votes_count ?? mp?.rating?.votes_count ?? null,
+          latitude: biz?.latitude || mp?.latitude || null,
+          longitude: biz?.longitude || mp?.longitude || null,
+          placeId: biz?.place_id || mp?.place_id || null,
+          cid: biz?.cid || mp?.cid || null,
           hours: null,
         }
       : null,

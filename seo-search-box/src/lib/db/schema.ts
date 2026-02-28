@@ -262,6 +262,55 @@ export const domainRankHistory = pgTable(
 );
 
 // ============================================
+// Saved Location (one per account)
+// ============================================
+
+export const savedLocations = pgTable(
+  "saved_locations",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" })
+      .unique(),
+    businessName: text("business_name").notNull(),
+    placeId: text("place_id"),
+    address: text("address"),
+    lat: decimal("lat", { precision: 10, scale: 7 }).notNull(),
+    lng: decimal("lng", { precision: 10, scale: 7 }).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    userIdIdx: index("saved_locations_user_id_idx").on(table.userId),
+  })
+);
+
+// ============================================
+// Rank Tracking Tables
+// ============================================
+
+export const trackedKeywords = pgTable(
+  "tracked_keywords",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    keyword: text("keyword").notNull(),
+    domain: text("domain").notNull(),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }),
+    lastPosition: integer("last_position"),
+    lastCheckedAt: timestamp("last_checked_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    keywordDomainIdx: index("tracked_keywords_keyword_domain_idx").on(
+      table.keyword,
+      table.domain
+    ),
+    userIdIdx: index("tracked_keywords_user_id_idx").on(table.userId),
+  })
+);
+
+// ============================================
 // User Features Tables
 // ============================================
 
@@ -308,6 +357,41 @@ export const alerts = pgTable(
 );
 
 // ============================================
+// Extension Analyses Table
+// ============================================
+
+export const extensionAnalyses = pgTable(
+  "extension_analyses",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
+    url: text("url").notNull(),
+    domain: text("domain").notNull(),
+    overallScore: integer("overall_score"),
+    scores: jsonb("scores"), // { meta, headings, images, links, schema, content, readability }
+    meta: jsonb("meta"),
+    headings: jsonb("headings"),
+    images: jsonb("images"),
+    links: jsonb("links"),
+    schemaData: jsonb("schema_data"),
+    content: jsonb("content"),
+    readability: jsonb("readability"),
+    ngrams: jsonb("ngrams"),
+    extensionVersion: text("extension_version"),
+    userAgent: text("user_agent"),
+    sessionId: text("session_id"), // anonymous session tracking
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    domainIdx: index("extension_analyses_domain_idx").on(table.domain),
+    urlIdx: index("extension_analyses_url_idx").on(table.url),
+    createdAtIdx: index("extension_analyses_created_at_idx").on(table.createdAt),
+    userIdIdx: index("extension_analyses_user_id_idx").on(table.userId),
+    domainCreatedIdx: index("extension_analyses_domain_created_idx").on(table.domain, table.createdAt),
+  })
+);
+
+// ============================================
 // Relations
 // ============================================
 
@@ -317,6 +401,14 @@ export const usersRelations = relations(users, ({ many }) => ({
   searches: many(searches),
   savedSearches: many(savedSearches),
   alerts: many(alerts),
+  extensionAnalyses: many(extensionAnalyses),
+}));
+
+export const extensionAnalysesRelations = relations(extensionAnalyses, ({ one }) => ({
+  user: one(users, {
+    fields: [extensionAnalyses.userId],
+    references: [users.id],
+  }),
 }));
 
 export const searchesRelations = relations(searches, ({ one, many }) => ({
