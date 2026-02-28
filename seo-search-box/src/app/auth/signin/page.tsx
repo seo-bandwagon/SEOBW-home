@@ -24,7 +24,7 @@ function SignInContent() {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-blue-600 mb-4">
             <Search className="h-8 w-8 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-white">Sign in to SEO Search Box</h1>
+          <h1 className="text-2xl font-bold text-white">Sign in to SEO Bandwagon</h1>
           <p className="text-slate-400 mt-2">
             Access your saved searches and track changes over time
           </p>
