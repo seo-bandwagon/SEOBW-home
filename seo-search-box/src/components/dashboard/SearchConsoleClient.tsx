@@ -56,6 +56,7 @@ export function SearchConsoleClient({ userEmail }: SearchConsoleClientProps) {
   const [gscStatus, setGscStatus] = useState<GscStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState<DateRange>("28d");
+  const [site, setSite] = useState<string>("");
 
   // TODO: Replace with real GSC API proxy once /api/gsc route is built
   // These will be populated by fetching from api.seobandwagon.dev GSC tools
@@ -92,14 +93,54 @@ export function SearchConsoleClient({ userEmail }: SearchConsoleClientProps) {
   };
 
   const fetchGscData = async () => {
-    // TODO: Wire to /api/gsc proxy route that calls api.seobandwagon.dev GSC tools
-    // For now, the UI is ready — just needs the API endpoint
-    // The MCP server already has the GSC tools (src/tools/gsc.ts)
-    // We need a Next.js API route that proxies requests:
-    //   GET /api/gsc?type=queries&range=28d&email=user@example.com
-    //   GET /api/gsc?type=pages&range=28d&email=user@example.com
-    //   GET /api/gsc?type=performance&range=28d&email=user@example.com
-    setLoading(false);
+    setLoading(true);
+    try {
+      const email = encodeURIComponent(userEmail);
+      // First get user's sites to find the right siteUrl
+      const sitesRes = await fetch(
+        `https://api.seobandwagon.dev/api/gsc/sites?email=${email}`
+      );
+      const sitesData = await sitesRes.json();
+      const siteUrl = sitesData.sites?.[0]?.siteUrl;
+
+      if (!siteUrl) {
+        // User has GSC connected but no verified sites
+        setLoading(false);
+        return;
+      }
+
+      setSite(siteUrl);
+      const site = encodeURIComponent(siteUrl);
+
+      const [queriesRes, pagesRes, perfRes] = await Promise.allSettled([
+        fetch(
+          `https://api.seobandwagon.dev/api/gsc/queries?email=${email}&site=${site}&range=${dateRange}`
+        ).then((r) => r.json()),
+        fetch(
+          `https://api.seobandwagon.dev/api/gsc/pages?email=${email}&site=${site}&range=${dateRange}`
+        ).then((r) => r.json()),
+        fetch(
+          `https://api.seobandwagon.dev/api/gsc/performance?email=${email}&site=${site}&range=${dateRange}`
+        ).then((r) => r.json()),
+      ]);
+
+      if (queriesRes.status === "fulfilled") setQueries(queriesRes.value.queries || []);
+      if (pagesRes.status === "fulfilled") setPages(pagesRes.value.pages || []);
+      if (perfRes.status === "fulfilled") {
+        setPerformance(perfRes.value.performance || []);
+        const t = perfRes.value.totals;
+        if (t) {
+          setTotalClicks(t.clicks || 0);
+          setTotalImpressions(t.impressions || 0);
+          setAvgCtr(t.avgCtr || 0);
+          setAvgPosition(t.avgPosition || 0);
+        }
+      }
+    } catch (err) {
+      console.error("GSC data fetch error:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const connectGsc = () => {
@@ -220,12 +261,7 @@ export function SearchConsoleClient({ userEmail }: SearchConsoleClientProps) {
           <div className="h-[250px] flex flex-col items-center justify-center text-[#F5F5F5]/30">
             <AlertCircle className="h-8 w-8 mb-3" />
             <p className="text-sm">
-              {hasData
-                ? "Performance chart loading..."
-                : "No data yet. GSC data will appear once the API proxy is connected."}
-            </p>
-            <p className="text-xs mt-2 text-[#F5F5F5]/20">
-              API integration in progress — dashboard UI is ready.
+              No performance data for this period yet.
             </p>
           </div>
         )}
