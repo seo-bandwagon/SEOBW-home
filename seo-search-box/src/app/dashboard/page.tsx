@@ -29,7 +29,11 @@ export default async function DashboardPage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
       <Navbar />
       <DashboardClient
-        userName={session.user.name?.split(" ")[0]}
+        user={{
+          name: session.user.name || "User",
+          email: session.user.email || "",
+          image: session.user.image || null,
+        }}
         recentSearches={formattedSearches}
         savedSearchCount={savedSearches.length}
       />

@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
+import { signOut } from "next-auth/react";
 import {
   Search,
   TrendingUp,
@@ -14,12 +16,17 @@ import {
   Building2,
   RefreshCw,
   AlertCircle,
+  User,
+  LogOut,
+  Settings,
+  CheckCircle,
+  XCircle,
+  ExternalLink,
 } from "lucide-react";
 import { AreaChart } from "@/components/charts/AreaChart";
 import { BarChart } from "@/components/charts/BarChart";
 import { PieChart } from "@/components/charts/PieChart";
 import { cn } from "@/lib/utils";
-
 interface SearchStats {
   inputType: string;
   count: number;
@@ -50,8 +57,14 @@ interface AnalyticsOverview {
   topDomains: TopDomain[];
 }
 
+interface User {
+  name: string;
+  email: string;
+  image: string | null;
+}
+
 interface DashboardClientProps {
-  userName?: string;
+  user: User;
   recentSearches: RecentSearch[];
   savedSearchCount: number;
 }
@@ -71,13 +84,15 @@ const TYPE_ICONS: Record<string, typeof Hash> = {
 };
 
 export function DashboardClient({
-  userName,
+  user,
+  
   recentSearches,
   savedSearchCount,
 }: DashboardClientProps) {
   const [analytics, setAnalytics] = useState<AnalyticsOverview | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [gscConnected, setGscConnected] = useState<boolean | null>(null);
 
   useEffect(() => {
     fetchAnalytics();
@@ -136,7 +151,7 @@ export function DashboardClient({
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold text-white">
-            Welcome back, {userName || "User"}
+            Welcome back, {user.name.split(" ")[0]}
           </h1>
           <p className="text-slate-400 mt-1">
             {"Here's an overview of your SEO research activity"}
@@ -150,6 +165,59 @@ export function DashboardClient({
           <RefreshCw className={cn("h-4 w-4 text-slate-400", loading && "animate-spin")} />
           <span className="text-slate-300 text-sm">Refresh</span>
         </button>
+      </div>
+
+      {/* Account & Services */}
+      <div className="grid md:grid-cols-2 gap-6 mb-8">
+        {/* Account Info */}
+        <div className="rounded-xl bg-slate-800/50 border border-slate-700 p-6">
+          <div className="flex items-center gap-4">
+            {user.image ? (
+              <Image
+                src={user.image}
+                alt={user.name}
+                width={48}
+                height={48}
+                className="rounded-full"
+              />
+            ) : (
+              <div className="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center">
+                <User className="w-6 h-6 text-blue-400" />
+              </div>
+            )}
+            <div className="flex-1">
+              <p className="text-white font-medium">{user.name}</p>
+              <p className="text-sm text-slate-400">{user.email}</p>
+            </div>
+            <button
+              onClick={() => signOut({ callbackUrl: "/" })}
+              className="p-2 rounded-lg hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
+              title="Sign out"
+            >
+              <LogOut className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Connected Services */}
+        <div className="rounded-xl bg-slate-800/50 border border-slate-700 p-6">
+          <h3 className="text-sm font-medium text-slate-400 mb-4">Connected Services</h3>
+          <Link
+            href="/dashboard/search-console"
+            className="flex items-center justify-between p-3 rounded-lg bg-slate-700/30 hover:bg-slate-700/50 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center">
+                <Search className="w-5 h-5 text-green-400" />
+              </div>
+              <div>
+                <p className="text-white font-medium">Google Search Console</p>
+                <p className="text-xs text-slate-400">View your search performance</p>
+              </div>
+            </div>
+            <ArrowRight className="w-5 h-5 text-slate-400" />
+          </Link>
+        </div>
       </div>
 
       {/* Quick Actions */}
