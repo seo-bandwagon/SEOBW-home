@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
-import { User, LogOut, History, Bookmark, LayoutDashboard, MapPin, Navigation, Building2, BarChart3 } from "lucide-react";
+import { User, LogOut, History, Bookmark, LayoutDashboard, MapPin, Navigation, Building2, BarChart3, Search, HeartPulse } from "lucide-react";
 
 export function Navbar() {
   const { data: session, status } = useSession();
@@ -68,13 +68,35 @@ export function Navbar() {
           </li>
           {session && (
             <>
-              <li>
-                <Link
-                  href="/dashboard"
-                  className="font-heading text-xl text-[#F5F5F5]/70 no-underline tracking-[1px] transition-all hover:text-[#F5F5F5]"
-                >
+              <li className="relative group">
+                <span className="font-heading text-xl text-[#F5F5F5]/70 tracking-[1px] transition-all hover:text-[#F5F5F5] cursor-pointer">
                   DASHBOARD
-                </Link>
+                </span>
+                <div className="absolute left-0 top-full mt-2 w-56 rounded-lg bg-[#000022] border-2 border-pink shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                  <div className="p-2">
+                    <Link
+                      href="/dashboard"
+                      className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-[#F5F5F5]/70 hover:bg-pink/20 hover:text-[#F5F5F5] transition-colors no-underline"
+                    >
+                      <LayoutDashboard className="h-4 w-4 text-pink" />
+                      Overview
+                    </Link>
+                    <Link
+                      href="/dashboard/search-console"
+                      className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-[#F5F5F5]/70 hover:bg-pink/20 hover:text-[#F5F5F5] transition-colors no-underline"
+                    >
+                      <Search className="h-4 w-4 text-blue-400" />
+                      Search Console
+                    </Link>
+                    <Link
+                      href="/dashboard/site-health"
+                      className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-[#F5F5F5]/70 hover:bg-pink/20 hover:text-[#F5F5F5] transition-colors no-underline"
+                    >
+                      <HeartPulse className="h-4 w-4 text-green-400" />
+                      Site Health
+                    </Link>
+                  </div>
+                </div>
               </li>
               <li>
                 <Link

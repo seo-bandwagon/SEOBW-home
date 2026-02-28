@@ -1,36 +1,31 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
 import {
   Search,
-  Globe,
-  TrendingUp,
-  MousePointer,
-  Eye,
-  BarChart3,
   RefreshCw,
   ExternalLink,
-  Link2,
+  ArrowUpDown,
+  TrendingUp,
+  TrendingDown,
+  MousePointerClick,
+  Eye,
+  Target,
+  BarChart3,
   AlertCircle,
-  CheckCircle,
 } from "lucide-react";
 import { AreaChart } from "@/components/charts/AreaChart";
-import { cn } from "@/lib/utils";
 
-const API_BASE = "https://api.seobandwagon.dev";
+type DateRange = "7d" | "28d" | "3m";
 
-interface GSCStatus {
+interface GscStatus {
   connected: boolean;
   email?: string;
   gsc_connected?: boolean;
 }
 
-interface Site {
-  siteUrl: string;
-  permissionLevel: string;
-}
-
-interface QueryData {
+interface QueryRow {
   query: string;
   clicks: number;
   impressions: number;
@@ -38,7 +33,7 @@ interface QueryData {
   position: number;
 }
 
-interface PageData {
+interface PageRow {
   page: string;
   clicks: number;
   impressions: number;
@@ -46,7 +41,8 @@ interface PageData {
   position: number;
 }
 
-interface TrendData {
+interface PerformancePoint {
+  [key: string]: string | number;
   date: string;
   clicks: number;
   impressions: number;
@@ -57,304 +53,362 @@ interface SearchConsoleClientProps {
 }
 
 export function SearchConsoleClient({ userEmail }: SearchConsoleClientProps) {
-  const [status, setStatus] = useState<GSCStatus | null>(null);
-  const [sites, setSites] = useState<Site[]>([]);
-  const [selectedSite, setSelectedSite] = useState<string | null>(null);
-  const [queries, setQueries] = useState<QueryData[]>([]);
-  const [pages, setPages] = useState<PageData[]>([]);
-  const [trend, setTrend] = useState<TrendData[]>([]);
+  const [gscStatus, setGscStatus] = useState<GscStatus | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"queries" | "pages">("queries");
+  const [dateRange, setDateRange] = useState<DateRange>("28d");
+  const [site, setSite] = useState<string>("");
 
-  // Check connection status on mount
-  useEffect(() => {
-    checkStatus();
-  }, [userEmail]);
+  // TODO: Replace with real GSC API proxy once /api/gsc route is built
+  // These will be populated by fetching from api.seobandwagon.dev GSC tools
+  const [queries, setQueries] = useState<QueryRow[]>([]);
+  const [pages, setPages] = useState<PageRow[]>([]);
+  const [performance, setPerformance] = useState<PerformancePoint[]>([]);
+  const [totalClicks, setTotalClicks] = useState(0);
+  const [totalImpressions, setTotalImpressions] = useState(0);
+  const [avgCtr, setAvgCtr] = useState(0);
+  const [avgPosition, setAvgPosition] = useState(0);
 
-  // Load data when site is selected
   useEffect(() => {
-    if (selectedSite && status?.connected) {
-      loadData();
+    checkConnection();
+  }, []);
+
+  useEffect(() => {
+    if (gscStatus?.connected) {
+      fetchGscData();
     }
-  }, [selectedSite]);
+  }, [gscStatus?.connected, dateRange]);
 
-  const checkStatus = async () => {
+  const checkConnection = async () => {
     try {
-      const res = await fetch(`${API_BASE}/auth/status?email=${encodeURIComponent(userEmail)}`);
+      const res = await fetch(
+        `https://api.seobandwagon.dev/auth/status?email=${encodeURIComponent(userEmail)}`
+      );
       const data = await res.json();
-      setStatus(data);
-
-      if (data.connected) {
-        await loadSites();
-      }
-    } catch (err) {
-      setError("Failed to check connection status");
+      setGscStatus(data);
+    } catch {
+      setGscStatus({ connected: false });
     } finally {
       setLoading(false);
     }
   };
 
-  const loadSites = async () => {
-    try {
-      const res = await fetch(`${API_BASE}/gsc/sites?email=${encodeURIComponent(userEmail)}`);
-      const data = await res.json();
-      
-      if (data.error) {
-        setError(data.details || data.error);
-        return;
-      }
-      
-      setSites(data.sites || []);
-      if (data.sites?.length > 0) {
-        setSelectedSite(data.sites[0].siteUrl);
-      }
-    } catch (err) {
-      setError("Failed to load sites");
-    }
-  };
-
-  const loadData = async () => {
-    if (!selectedSite) return;
-    
+  const fetchGscData = async () => {
     setLoading(true);
     try {
-      const [queriesRes, pagesRes, trendRes] = await Promise.all([
-        fetch(`${API_BASE}/gsc/queries?email=${encodeURIComponent(userEmail)}&site=${encodeURIComponent(selectedSite)}`),
-        fetch(`${API_BASE}/gsc/pages?email=${encodeURIComponent(userEmail)}&site=${encodeURIComponent(selectedSite)}`),
-        fetch(`${API_BASE}/gsc/performance?email=${encodeURIComponent(userEmail)}&site=${encodeURIComponent(selectedSite)}`),
+      const email = encodeURIComponent(userEmail);
+      // First get user's sites to find the right siteUrl
+      const sitesRes = await fetch(
+        `https://api.seobandwagon.dev/api/gsc/sites?email=${email}`
+      );
+      const sitesData = await sitesRes.json();
+      const siteUrl = sitesData.sites?.[0]?.siteUrl;
+
+      if (!siteUrl) {
+        // User has GSC connected but no verified sites
+        setLoading(false);
+        return;
+      }
+
+      setSite(siteUrl);
+      const site = encodeURIComponent(siteUrl);
+
+      const [queriesRes, pagesRes, perfRes] = await Promise.allSettled([
+        fetch(
+          `https://api.seobandwagon.dev/api/gsc/queries?email=${email}&site=${site}&range=${dateRange}`
+        ).then((r) => r.json()),
+        fetch(
+          `https://api.seobandwagon.dev/api/gsc/pages?email=${email}&site=${site}&range=${dateRange}`
+        ).then((r) => r.json()),
+        fetch(
+          `https://api.seobandwagon.dev/api/gsc/performance?email=${email}&site=${site}&range=${dateRange}`
+        ).then((r) => r.json()),
       ]);
 
-      const [queriesData, pagesData, trendData] = await Promise.all([
-        queriesRes.json(),
-        pagesRes.json(),
-        trendRes.json(),
-      ]);
-
-      setQueries(queriesData.queries || []);
-      setPages(pagesData.pages || []);
-      setTrend(trendData.performance || []);
-      setError(null);
+      if (queriesRes.status === "fulfilled") setQueries(queriesRes.value.queries || []);
+      if (pagesRes.status === "fulfilled") setPages(pagesRes.value.pages || []);
+      if (perfRes.status === "fulfilled") {
+        setPerformance(perfRes.value.performance || []);
+        const t = perfRes.value.totals;
+        if (t) {
+          setTotalClicks(t.clicks || 0);
+          setTotalImpressions(t.impressions || 0);
+          setAvgCtr(t.avgCtr || 0);
+          setAvgPosition(t.avgPosition || 0);
+        }
+      }
     } catch (err) {
-      setError("Failed to load Search Console data");
+      console.error("GSC data fetch error:", err);
     } finally {
       setLoading(false);
     }
   };
 
-  const connectGSC = () => {
-    const callbackUrl = `${window.location.origin}/api/gsc/callback`;
-    window.location.href = `${API_BASE}/auth/google?redirect=${encodeURIComponent(callbackUrl)}`;
+  const connectGsc = () => {
+    const redirect = encodeURIComponent(window.location.origin + "/dashboard/search-console");
+    window.location.href = `https://api.seobandwagon.dev/auth/google?redirect=${redirect}`;
   };
 
-  // Calculate totals
-  const totalClicks = queries.reduce((sum, q) => sum + q.clicks, 0);
-  const totalImpressions = queries.reduce((sum, q) => sum + q.impressions, 0);
-  const avgPosition = queries.length > 0 
-    ? (queries.reduce((sum, q) => sum + q.position, 0) / queries.length).toFixed(1)
-    : "0";
-  const avgCtr = totalImpressions > 0 
-    ? ((totalClicks / totalImpressions) * 100).toFixed(2)
-    : "0";
-
-  // Not connected state
-  if (!loading && (!status?.connected || !status?.gsc_connected)) {
+  if (loading) {
     return (
-      <div className="container mx-auto px-4 py-12">
-        <div className="max-w-md mx-auto text-center">
-          <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-blue-500/10 flex items-center justify-center">
-            <Search className="w-10 h-10 text-blue-400" />
-          </div>
-          <h1 className="text-2xl font-bold text-white mb-4">
-            Connect Google Search Console
-          </h1>
-          <p className="text-slate-400 mb-8">
-            Link your Search Console account to see your search performance data,
-            top queries, and pages.
-          </p>
-          <button
-            onClick={connectGSC}
-            className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
-          >
-            <Globe className="w-5 h-5" />
-            Connect Search Console
-          </button>
-        </div>
+      <div className="flex items-center justify-center h-64">
+        <RefreshCw className="h-8 w-8 text-pink animate-spin" />
       </div>
     );
   }
 
+  if (!gscStatus?.connected) {
+    return (
+      <div className="max-w-lg mx-auto text-center py-20">
+        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-blue-500/20 mx-auto mb-6">
+          <Search className="h-8 w-8 text-blue-400" />
+        </div>
+        <h1 className="text-2xl font-heading text-[#F5F5F5] tracking-wide mb-3">
+          Connect Google Search Console
+        </h1>
+        <p className="text-[#F5F5F5]/50 text-sm mb-8 max-w-sm mx-auto">
+          Link your Search Console account to see your pages, queries, clicks,
+          impressions, and ranking data right here.
+        </p>
+        <button
+          onClick={connectGsc}
+          className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors border-none cursor-pointer"
+        >
+          Connect Search Console
+          <ExternalLink className="h-4 w-4" />
+        </button>
+        <p className="text-xs text-[#F5F5F5]/30 mt-4">
+          We request read-only access to your Search Console data.
+        </p>
+      </div>
+    );
+  }
+
+  const hasData = queries.length > 0 || pages.length > 0;
+
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="max-w-6xl">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-white mb-2">Search Console</h1>
-          <div className="flex items-center gap-2 text-sm text-slate-400">
-            <CheckCircle className="w-4 h-4 text-green-400" />
-            Connected as {userEmail}
-          </div>
+          <h1 className="text-2xl font-heading text-[#F5F5F5] tracking-wide">
+            Search Console
+          </h1>
+          <p className="text-sm text-[#F5F5F5]/40 mt-1">
+            Connected as {gscStatus.email || userEmail}
+          </p>
         </div>
-        <div className="flex items-center gap-4">
-          {sites.length > 1 && (
-            <select
-              value={selectedSite || ""}
-              onChange={(e) => setSelectedSite(e.target.value)}
-              className="bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white"
+
+        {/* Date Range */}
+        <div className="flex items-center gap-1 bg-[#F5F5F5]/5 rounded-lg p-1">
+          {(["7d", "28d", "3m"] as DateRange[]).map((range) => (
+            <button
+              key={range}
+              onClick={() => setDateRange(range)}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors border-none cursor-pointer ${
+                dateRange === range
+                  ? "bg-pink text-white"
+                  : "bg-transparent text-[#F5F5F5]/50 hover:text-[#F5F5F5]"
+              }`}
             >
-              {sites.map((site) => (
-                <option key={site.siteUrl} value={site.siteUrl}>
-                  {site.siteUrl.replace(/^sc-domain:|https?:\/\//, "")}
-                </option>
-              ))}
-            </select>
-          )}
-          <button
-            onClick={loadData}
-            disabled={loading}
-            className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-white transition-colors"
-          >
-            <RefreshCw className={cn("w-4 h-4", loading && "animate-spin")} />
-            Refresh
-          </button>
+              {range === "7d" ? "7 Days" : range === "28d" ? "28 Days" : "3 Months"}
+            </button>
+          ))}
         </div>
       </div>
 
-      {error && (
-        <div className="mb-6 p-4 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center gap-3">
-          <AlertCircle className="w-5 h-5 text-red-400" />
-          <span className="text-red-400">{error}</span>
-          <button onClick={connectGSC} className="ml-auto text-sm text-blue-400 hover:underline">
-            Reconnect
-          </button>
-        </div>
-      )}
-
-      {/* Stats */}
-      <div className="grid md:grid-cols-4 gap-4 mb-8">
-        <StatCard icon={MousePointer} label="Total Clicks" value={totalClicks.toLocaleString()} />
-        <StatCard icon={Eye} label="Total Impressions" value={totalImpressions.toLocaleString()} />
-        <StatCard icon={TrendingUp} label="Avg. CTR" value={`${avgCtr}%`} />
-        <StatCard icon={BarChart3} label="Avg. Position" value={avgPosition} />
+      {/* Summary Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <MetricCard
+          icon={MousePointerClick}
+          label="Total Clicks"
+          value={totalClicks.toLocaleString()}
+          color="text-blue-400"
+        />
+        <MetricCard
+          icon={Eye}
+          label="Total Impressions"
+          value={totalImpressions.toLocaleString()}
+          color="text-purple-400"
+        />
+        <MetricCard
+          icon={Target}
+          label="Avg CTR"
+          value={`${(avgCtr * 100).toFixed(1)}%`}
+          color="text-green-400"
+        />
+        <MetricCard
+          icon={BarChart3}
+          label="Avg Position"
+          value={avgPosition.toFixed(1)}
+          color="text-orange-400"
+        />
       </div>
 
-      {/* Trend Chart */}
-      <div className="rounded-xl bg-slate-800/50 border border-slate-700 p-6 mb-8">
-        <h2 className="text-lg font-semibold text-white mb-4">Performance Trend (Last 28 Days)</h2>
-        {trend.length > 0 ? (
+      {/* Performance Chart */}
+      <div className="rounded-xl bg-[#000022] border-2 border-pink/30 p-6 mb-8">
+        <h2 className="text-base font-heading text-[#F5F5F5] tracking-wide mb-4">
+          Performance
+        </h2>
+        {performance.length > 0 ? (
           <AreaChart
-            data={trend.map(t => ({ ...t, date: t.date.slice(5) }))}
+            data={performance}
             dataKey="clicks"
             xAxisKey="date"
-            color="#3b82f6"
+            color="#FF1493"
             height={250}
           />
         ) : (
-          <div className="h-[250px] flex items-center justify-center text-slate-500">
-            No trend data available
+          <div className="h-[250px] flex flex-col items-center justify-center text-[#F5F5F5]/30">
+            <AlertCircle className="h-8 w-8 mb-3" />
+            <p className="text-sm">
+              No performance data for this period yet.
+            </p>
           </div>
         )}
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-2 mb-6">
-        <button
-          onClick={() => setActiveTab("queries")}
-          className={cn(
-            "px-4 py-2 rounded-lg font-medium transition-colors",
-            activeTab === "queries"
-              ? "bg-blue-600 text-white"
-              : "bg-slate-800 text-slate-400 hover:text-white"
+      {/* Tables */}
+      <div className="grid md:grid-cols-2 gap-6">
+        {/* Top Queries */}
+        <div className="rounded-xl bg-[#000022] border-2 border-pink/30 p-6">
+          <h2 className="text-base font-heading text-[#F5F5F5] tracking-wide mb-4">
+            Top Queries
+          </h2>
+          {queries.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-pink/20">
+                    <th className="text-left py-2 px-2 text-xs font-medium text-[#F5F5F5]/40 uppercase">
+                      Query
+                    </th>
+                    <th className="text-right py-2 px-2 text-xs font-medium text-[#F5F5F5]/40 uppercase">
+                      Clicks
+                    </th>
+                    <th className="text-right py-2 px-2 text-xs font-medium text-[#F5F5F5]/40 uppercase">
+                      Impr
+                    </th>
+                    <th className="text-right py-2 px-2 text-xs font-medium text-[#F5F5F5]/40 uppercase">
+                      CTR
+                    </th>
+                    <th className="text-right py-2 px-2 text-xs font-medium text-[#F5F5F5]/40 uppercase">
+                      Pos
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {queries.map((q, i) => (
+                    <tr key={i} className="border-b border-[#F5F5F5]/5 hover:bg-[#F5F5F5]/5">
+                      <td className="py-2 px-2 text-sm text-[#F5F5F5]">
+                        {q.query}
+                      </td>
+                      <td className="py-2 px-2 text-sm text-[#F5F5F5]/70 text-right">
+                        {q.clicks}
+                      </td>
+                      <td className="py-2 px-2 text-sm text-[#F5F5F5]/70 text-right">
+                        {q.impressions}
+                      </td>
+                      <td className="py-2 px-2 text-sm text-[#F5F5F5]/70 text-right">
+                        {(q.ctr * 100).toFixed(1)}%
+                      </td>
+                      <td className="py-2 px-2 text-sm text-[#F5F5F5]/70 text-right">
+                        {q.position.toFixed(1)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <EmptyTable message="Connect GSC to see your top queries" />
           )}
-        >
-          Top Queries
-        </button>
-        <button
-          onClick={() => setActiveTab("pages")}
-          className={cn(
-            "px-4 py-2 rounded-lg font-medium transition-colors",
-            activeTab === "pages"
-              ? "bg-blue-600 text-white"
-              : "bg-slate-800 text-slate-400 hover:text-white"
-          )}
-        >
-          Top Pages
-        </button>
-      </div>
+        </div>
 
-      {/* Data Table */}
-      <div className="rounded-xl bg-slate-800/50 border border-slate-700 overflow-hidden">
-        <table className="w-full">
-          <thead>
-            <tr className="bg-slate-900/50">
-              <th className="text-left py-3 px-4 text-xs font-medium text-slate-400 uppercase">
-                {activeTab === "queries" ? "Query" : "Page"}
-              </th>
-              <th className="text-right py-3 px-4 text-xs font-medium text-slate-400 uppercase">Clicks</th>
-              <th className="text-right py-3 px-4 text-xs font-medium text-slate-400 uppercase">Impressions</th>
-              <th className="text-right py-3 px-4 text-xs font-medium text-slate-400 uppercase">CTR</th>
-              <th className="text-right py-3 px-4 text-xs font-medium text-slate-400 uppercase">Position</th>
-            </tr>
-          </thead>
-          <tbody>
-            {(activeTab === "queries" ? queries : pages).slice(0, 20).map((item, idx) => (
-              <tr key={idx} className="border-t border-slate-700/50 hover:bg-slate-700/30">
-                <td className="py-3 px-4">
-                  <div className="flex items-center gap-2">
-                    {activeTab === "queries" ? (
-                      <Search className="w-4 h-4 text-slate-500" />
-                    ) : (
-                      <Link2 className="w-4 h-4 text-slate-500" />
-                    )}
-                    <span className="text-white text-sm truncate max-w-[300px]">
-                      {activeTab === "queries" 
-                        ? (item as QueryData).query 
-                        : (item as PageData).page.replace(selectedSite || "", "")}
-                    </span>
-                  </div>
-                </td>
-                <td className="py-3 px-4 text-right text-sm text-slate-300">
-                  {item.clicks.toLocaleString()}
-                </td>
-                <td className="py-3 px-4 text-right text-sm text-slate-300">
-                  {item.impressions.toLocaleString()}
-                </td>
-                <td className="py-3 px-4 text-right text-sm text-slate-300">
-                  {(item.ctr * 100).toFixed(1)}%
-                </td>
-                <td className="py-3 px-4 text-right text-sm text-slate-300">
-                  {item.position.toFixed(1)}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {(activeTab === "queries" ? queries : pages).length === 0 && (
-          <div className="py-12 text-center text-slate-500">
-            No data available
-          </div>
-        )}
+        {/* Top Pages */}
+        <div className="rounded-xl bg-[#000022] border-2 border-pink/30 p-6">
+          <h2 className="text-base font-heading text-[#F5F5F5] tracking-wide mb-4">
+            Top Pages
+          </h2>
+          {pages.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-pink/20">
+                    <th className="text-left py-2 px-2 text-xs font-medium text-[#F5F5F5]/40 uppercase">
+                      Page
+                    </th>
+                    <th className="text-right py-2 px-2 text-xs font-medium text-[#F5F5F5]/40 uppercase">
+                      Clicks
+                    </th>
+                    <th className="text-right py-2 px-2 text-xs font-medium text-[#F5F5F5]/40 uppercase">
+                      Impr
+                    </th>
+                    <th className="text-right py-2 px-2 text-xs font-medium text-[#F5F5F5]/40 uppercase">
+                      CTR
+                    </th>
+                    <th className="text-right py-2 px-2 text-xs font-medium text-[#F5F5F5]/40 uppercase">
+                      Pos
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pages.map((p, i) => (
+                    <tr key={i} className="border-b border-[#F5F5F5]/5 hover:bg-[#F5F5F5]/5">
+                      <td className="py-2 px-2 text-sm text-[#F5F5F5] truncate max-w-[200px]">
+                        {p.page.replace(/^https?:\/\//, "")}
+                      </td>
+                      <td className="py-2 px-2 text-sm text-[#F5F5F5]/70 text-right">
+                        {p.clicks}
+                      </td>
+                      <td className="py-2 px-2 text-sm text-[#F5F5F5]/70 text-right">
+                        {p.impressions}
+                      </td>
+                      <td className="py-2 px-2 text-sm text-[#F5F5F5]/70 text-right">
+                        {(p.ctr * 100).toFixed(1)}%
+                      </td>
+                      <td className="py-2 px-2 text-sm text-[#F5F5F5]/70 text-right">
+                        {p.position.toFixed(1)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <EmptyTable message="Connect GSC to see your top pages" />
+          )}
+        </div>
       </div>
     </div>
   );
 }
 
-function StatCard({
+function MetricCard({
   icon: Icon,
   label,
   value,
+  color,
 }: {
-  icon: typeof MousePointer;
+  icon: typeof Search;
   label: string;
   value: string;
+  color: string;
 }) {
   return (
-    <div className="rounded-xl bg-slate-800/50 border border-slate-700 p-6">
-      <div className="flex items-center gap-2 text-slate-400 mb-2">
-        <Icon className="w-4 h-4" />
-        <span className="text-sm">{label}</span>
+    <div className="rounded-xl bg-[#000022] border-2 border-pink/30 p-4">
+      <div className="flex items-center gap-2 mb-2">
+        <Icon className={`h-4 w-4 ${color}`} />
+        <span className="text-xs text-[#F5F5F5]/40">{label}</span>
       </div>
-      <p className="text-2xl font-bold text-white">{value}</p>
+      <p className="text-xl font-bold text-[#F5F5F5]">{value}</p>
+    </div>
+  );
+}
+
+function EmptyTable({ message }: { message: string }) {
+  return (
+    <div className="h-[200px] flex items-center justify-center">
+      <p className="text-[#F5F5F5]/30 text-sm">{message}</p>
     </div>
   );
 }
