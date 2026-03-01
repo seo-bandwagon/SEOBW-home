@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Globe,
   Clock,
@@ -12,6 +13,7 @@ import {
   Search,
   BarChart3,
   Calendar,
+  ArrowRight,
 } from "lucide-react";
 import { BarChart } from "@/components/charts";
 
@@ -65,6 +67,7 @@ export function WikiAnalysisClient() {
   const [searchFilter, setSearchFilter] = useState("");
   const [sortField, setSortField] = useState<SortField>("captures");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const router = useRouter();
 
   useEffect(() => {
     fetch("/api/wiki-analysis")
@@ -422,16 +425,24 @@ export function WikiAnalysisClient() {
                       </div>
                     </div>
 
-                    {/* Wikipedia Link */}
-                    <div className="mt-3 pt-3 border-t border-pink/10">
+                    {/* Actions */}
+                    <div className="mt-3 pt-3 border-t border-pink/10 flex items-center gap-4">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          router.push(`/dashboard/wiki-analysis/${page.slug}`);
+                        }}
+                        className="inline-flex items-center gap-1 text-xs font-semibold text-pink hover:text-pink/80 transition-colors"
+                      >
+                        Deep Analysis <ArrowRight className="h-3 w-3" />
+                      </button>
                       <a
                         href={page.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-xs text-pink hover:text-pink/80 transition-colors"
+                        className="inline-flex items-center gap-1 text-xs text-[#F5F5F5]/40 hover:text-pink transition-colors"
                       >
-                        View on Wikipedia{" "}
-                        <ExternalLink className="h-3 w-3" />
+                        Wikipedia <ExternalLink className="h-3 w-3" />
                       </a>
                     </div>
                   </div>
