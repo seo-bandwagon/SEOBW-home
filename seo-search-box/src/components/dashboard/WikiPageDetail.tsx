@@ -193,6 +193,19 @@ export function WikiPageDetail({ slug }: { slug: string }) {
           <a href={page.url} target="_blank" rel="noopener noreferrer" className="text-pink hover:text-pink/80">
             View on Wikipedia <ExternalLink className="h-3 w-3 inline" />
           </a>
+          {slug === "Search_engine_optimization" && (
+            <>
+              {" · "}
+              <Link href="/wiki-analysis/seo-deep-dive" className="text-pink hover:text-pink/80">
+                N-gram Deep Dive →
+              </Link>
+            </>
+          )}
+        </p>
+      </div>
+
+      {/* Stats
+          </a>
         </p>
       </div>
 
