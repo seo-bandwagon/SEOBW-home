@@ -15,26 +15,26 @@ function SignInContent() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+    <div className="min-h-screen bg-[#000022]">
       <Navbar />
       <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-blue-600 mb-4">
-            <Search className="h-8 w-8 text-white" />
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-pink/20 border-2 border-pink mb-4">
+            <Search className="h-8 w-8 text-pink" />
           </div>
-          <h1 className="text-2xl font-bold text-white">Sign in to SEO Bandwagon</h1>
-          <p className="text-slate-400 mt-2">
+          <h1 className="text-2xl font-heading text-[#F5F5F5] tracking-wide">Sign in to SEO Bandwagon</h1>
+          <p className="text-[#F5F5F5]/50 mt-2">
             Access your saved searches and track changes over time
           </p>
         </div>
 
         {/* Auth Options */}
-        <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6 space-y-4">
+        <div className="bg-[#F5F5F5]/5 border-2 border-pink/30 rounded-xl p-6 space-y-4">
           <button
             onClick={handleGoogleLogin}
-            className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-lg bg-white text-slate-900 font-medium hover:bg-slate-100 transition-colors"
+            className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-lg bg-white text-[#000022] font-medium hover:bg-[#F5F5F5] transition-colors"
           >
             <GoogleIcon />
             Continue with Google
@@ -43,7 +43,7 @@ function SignInContent() {
 
         {/* Benefits */}
         <div className="mt-8 space-y-3">
-          <p className="text-sm text-slate-500 text-center mb-4">
+          <p className="text-sm text-[#F5F5F5]/40 text-center mb-4">
             Why create an account?
           </p>
           <Benefit text="Save and bookmark your searches" />
@@ -53,13 +53,13 @@ function SignInContent() {
         </div>
 
         {/* Terms */}
-        <p className="text-xs text-slate-500 text-center mt-8">
+        <p className="text-xs text-[#F5F5F5]/30 text-center mt-8">
           By signing in, you agree to our{" "}
-          <a href="/terms" className="text-blue-400 hover:text-blue-300">
+          <a href="/terms" className="text-pink hover:text-pink/80">
             Terms of Service
           </a>{" "}
           and{" "}
-          <a href="/privacy" className="text-blue-400 hover:text-blue-300">
+          <a href="/privacy" className="text-pink hover:text-pink/80">
             Privacy Policy
           </a>
         </p>
@@ -72,8 +72,8 @@ function SignInContent() {
 export default function SignInPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
-        <div className="text-slate-400">Loading...</div>
+      <div className="min-h-screen bg-[#000022] flex items-center justify-center">
+        <div className="text-[#F5F5F5]/40">Loading...</div>
       </div>
     }>
       <SignInContent />
@@ -106,7 +106,7 @@ function GoogleIcon() {
 
 function Benefit({ text }: { text: string }) {
   return (
-    <div className="flex items-center gap-2 text-sm text-slate-400">
+    <div className="flex items-center gap-2 text-sm text-[#F5F5F5]/50">
       <svg
         className="w-4 h-4 text-green-400 flex-shrink-0"
         fill="none"
