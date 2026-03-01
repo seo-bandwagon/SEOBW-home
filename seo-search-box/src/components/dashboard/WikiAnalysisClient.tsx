@@ -163,7 +163,7 @@ export function WikiAnalysisClient() {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-heading font-bold text-[#F5F5F5]">
-          Wikipedia Analysis
+          Wikipedia SEO Pages Analysis
         </h1>
         <p className="text-[#F5F5F5]/60 mt-1">
           {pages.length} digital marketing Wikipedia pages — SERP rankings,

@@ -2,7 +2,7 @@ import { Navbar } from "@/components/common/Navbar";
 import { WikiAnalysisClient } from "@/components/dashboard/WikiAnalysisClient";
 
 export const metadata = {
-  title: "Wikipedia SEO Analysis — SEO Bandwagon",
+  title: "Wikipedia SEO Pages Analysis — SEO Bandwagon",
   description: "In-depth analysis of digital marketing Wikipedia pages: revision history, link evolution, section changes, and Wayback Machine data across 41 pages.",
 };
 
