@@ -430,7 +430,7 @@ export function WikiAnalysisClient() {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          router.push(`/dashboard/wiki-analysis/${page.slug}`);
+                          router.push(`/wiki-analysis/${page.slug}`);
                         }}
                         className="inline-flex items-center gap-1 text-xs font-semibold text-pink hover:text-pink/80 transition-colors"
                       >
