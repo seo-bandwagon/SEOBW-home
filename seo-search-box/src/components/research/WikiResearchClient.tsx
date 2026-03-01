@@ -59,7 +59,7 @@ export function WikiResearchClient() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white mb-2">Wikipedia SEO Page Analysis</h1>
+        <h1 className="text-3xl font-bold text-white mb-2">Wikipedia SEO Pages Analysis</h1>
         <p className="text-slate-400">Complete historical analysis • {data.summary.total_unique_links} unique external links • 2004-2024</p>
       </div>
 
