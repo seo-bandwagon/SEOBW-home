@@ -80,6 +80,14 @@ export async function GET(
       LIMIT 15
     `);
 
+    // N-gram data
+    const ngrams = await db.execute(sql`
+      SELECT revid, snapshot_date, total_words, unique_words, unigrams, bigrams, trigrams, top_terms
+      FROM wiki_ngram_snapshots
+      WHERE slug = ${slug}
+      ORDER BY snapshot_date ASC
+    `);
+
     return NextResponse.json({
       page: (pageRows as unknown as Record<string, unknown>[])[0],
       revisionStats: (revStats as unknown as Record<string, unknown>[])[0],
@@ -88,6 +96,7 @@ export async function GET(
       linkDiffs,
       editHotspots,
       bigEdits,
+      ngrams,
     });
   } catch (error) {
     console.error("Wiki detail API error:", error);

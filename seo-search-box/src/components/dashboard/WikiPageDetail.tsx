@@ -57,6 +57,17 @@ interface BigEdit {
   comment: string;
 }
 
+interface NgramSnapshot {
+  revid: number;
+  snapshot_date: string;
+  total_words: number;
+  unique_words: number;
+  unigrams: Record<string, number>;
+  bigrams: Record<string, number>;
+  trigrams: Record<string, number>;
+  top_terms: { term: string; count: number; type: string }[];
+}
+
 interface RevTimeline {
   month: string;
   size: number;
@@ -103,6 +114,7 @@ export function WikiPageDetail({ slug }: { slug: string }) {
   const [linkDiffs, setLinkDiffs] = useState<LinkDiff[]>([]);
   const [editHotspots, setEditHotspots] = useState<EditHotspot[]>([]);
   const [bigEdits, setBigEdits] = useState<BigEdit[]>([]);
+  const [ngrams, setNgrams] = useState<NgramSnapshot[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedDiff, setExpandedDiff] = useState<number | null>(null);
@@ -121,6 +133,7 @@ export function WikiPageDetail({ slug }: { slug: string }) {
         setLinkDiffs(data.linkDiffs || []);
         setEditHotspots(data.editHotspots || []);
         setBigEdits(data.bigEdits || []);
+        setNgrams(data.ngrams || []);
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
@@ -261,9 +274,10 @@ export function WikiPageDetail({ slug }: { slug: string }) {
               .filter((s) => s.section_count > 0)
               .map((s, idx) => (
                 <div key={idx} className="flex gap-3 items-start text-xs">
-                  <span className="text-pink font-mono w-12 shrink-0">
+                  <a href={`https://en.wikipedia.org/w/index.php?oldid=${s.revid}`} target="_blank" rel="noopener noreferrer"
+                     className="text-pink hover:text-pink/80 font-mono w-12 shrink-0">
                     {new Date(s.snapshot_date).getFullYear()}
-                  </span>
+                  </a>
                   <span className="text-[#F5F5F5]/30 w-10 shrink-0 text-right">{s.section_count}§</span>
                   <div className="flex flex-wrap gap-1">
                     {(s.sections || []).slice(0, 20).map((h: string, hi: number) => (
@@ -306,8 +320,13 @@ export function WikiPageDetail({ slug }: { slug: string }) {
                       {sizeDelta >= 0 ? "+" : ""}{Math.round(sizeDelta / 1000)}KB
                     </span>
                     {d.domains_added?.length > 0 && (
-                      <span className="text-[10px] text-green-400/40 ml-auto">+{d.domains_added.length} domains</span>
+                      <span className="text-[10px] text-green-400/40">+{d.domains_added.length} domains</span>
                     )}
+                    <a href={`https://en.wikipedia.org/w/index.php?diff=${d.to_revid}&oldid=${d.from_revid}`}
+                       target="_blank" rel="noopener noreferrer"
+                       className="ml-auto text-pink/50 hover:text-pink shrink-0" title="View diff on Wikipedia">
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
                   </button>
 
                   {isExpanded && (
@@ -403,6 +422,77 @@ export function WikiPageDetail({ slug }: { slug: string }) {
         </Section>
       )}
 
+      {/* N-gram Analysis */}
+      {ngrams.length > 0 && (
+        <Section icon={<FileText className="h-5 w-5 text-pink" />} title="Terminology Evolution (N-gram Analysis)">
+          {/* Vocabulary growth chart */}
+          <div className="mb-4">
+            <p className="text-xs text-[#F5F5F5]/40 mb-2">Vocabulary size over time</p>
+            <div className="h-[180px]">
+              <AreaChart
+                data={ngrams.map((n) => ({
+                  name: new Date(n.snapshot_date).getFullYear().toString(),
+                  words: n.total_words,
+                  unique: n.unique_words,
+                }))}
+                dataKey="words"
+                xAxisKey="name"
+                color="#a855f7"
+              />
+            </div>
+          </div>
+
+          {/* Term evolution timeline */}
+          <div className="space-y-3">
+            <p className="text-xs text-[#F5F5F5]/40">Top bigrams by snapshot — click year to view revision</p>
+            {ngrams.map((n, idx) => {
+              const year = new Date(n.snapshot_date).getFullYear();
+              const topBigrams = Object.entries(n.bigrams || {}).slice(0, 12);
+              const maxCount = topBigrams.length > 0 ? topBigrams[0][1] : 1;
+              return (
+                <div key={idx} className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <a href={`https://en.wikipedia.org/w/index.php?oldid=${n.revid}`} target="_blank" rel="noopener noreferrer"
+                       className="text-pink hover:text-pink/80 font-mono text-xs w-12 shrink-0">
+                      {year}
+                    </a>
+                    <span className="text-[10px] text-[#F5F5F5]/30">{n.total_words.toLocaleString()} words · {n.unique_words.toLocaleString()} unique</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1 pl-14">
+                    {topBigrams.map(([term, count]) => {
+                      const opacity = 0.3 + 0.7 * (count / maxCount);
+                      return (
+                        <span key={term} className="text-[10px] px-1.5 py-0.5 rounded"
+                              style={{ backgroundColor: `rgba(168, 85, 247, ${opacity * 0.3})`, color: `rgba(245, 245, 245, ${opacity})` }}>
+                          {term} <span className="text-[#F5F5F5]/30">×{count}</span>
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Trigram highlights */}
+          {ngrams.length > 0 && ngrams[ngrams.length - 1].trigrams && (
+            <div className="mt-4">
+              <p className="text-xs text-[#F5F5F5]/40 mb-2">Current top trigrams</p>
+              <div className="flex flex-wrap gap-1">
+                {Object.entries(ngrams[ngrams.length - 1].trigrams).slice(0, 20).map(([term, count]) => (
+                  <span key={term} className="text-[10px] bg-purple-500/15 text-purple-300 px-2 py-0.5 rounded">
+                    {term} <span className="text-purple-300/40">×{count as number}</span>
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* New terms that appeared over time */}
+          <NewTermsTimeline ngrams={ngrams} />
+        </Section>
+      )}
+
       {/* No data state */}
       {snapshots.length === 0 && !revStats && (
         <div className="bg-[#F5F5F5]/5 border border-pink/20 rounded-lg p-8 text-center">
@@ -465,6 +555,43 @@ function LinkList({ label, items, color }: { label: string; items: string[]; col
           </div>
         ))}
         {items.length > 30 && <p className="text-[#F5F5F5]/30 text-[10px]">+{items.length - 30} more</p>}
+      </div>
+    </div>
+  );
+}
+
+function NewTermsTimeline({ ngrams }: { ngrams: NgramSnapshot[] }) {
+  if (ngrams.length < 2) return null;
+
+  const timeline: { year: number; newTerms: string[] }[] = [];
+  let prevTerms = new Set(Object.keys(ngrams[0].bigrams || {}));
+  for (let i = 1; i < ngrams.length; i++) {
+    const currTerms = new Set(Object.keys(ngrams[i].bigrams || {}));
+    const newOnes = Array.from(currTerms).filter((t) => !prevTerms.has(t)).slice(0, 8);
+    if (newOnes.length > 0) {
+      timeline.push({ year: new Date(ngrams[i].snapshot_date).getFullYear(), newTerms: newOnes });
+    }
+    prevTerms = currTerms;
+  }
+
+  if (timeline.length === 0) return null;
+
+  return (
+    <div className="mt-4">
+      <p className="text-xs text-[#F5F5F5]/40 mb-2">New terminology appearing over time</p>
+      <div className="space-y-1">
+        {timeline.map((t) => (
+          <div key={t.year} className="flex gap-3 items-start text-xs">
+            <span className="text-pink font-mono w-12 shrink-0">{t.year}</span>
+            <div className="flex flex-wrap gap-1">
+              {t.newTerms.map((term) => (
+                <span key={term} className="bg-green-500/10 text-green-400 px-1.5 py-0.5 rounded text-[10px]">
+                  + {term}
+                </span>
+              ))}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
