@@ -73,11 +73,19 @@ export function SearchConsoleClient({ userEmail }: SearchConsoleClientProps) {
     checkConnection();
   }, []);
 
+  // Step 1: load sites once connected
   useEffect(() => {
-    if (gscStatus?.connected && site) {
-      fetchGscData();
+    if (gscStatus?.connected) {
+      loadSites();
     }
-  }, [gscStatus?.connected, dateRange, site]);
+  }, [gscStatus?.connected]);
+
+  // Step 2: fetch data when site or dateRange changes
+  useEffect(() => {
+    if (site) {
+      fetchGscData(site);
+    }
+  }, [site, dateRange]);
 
   const checkConnection = async () => {
     try {
@@ -93,30 +101,28 @@ export function SearchConsoleClient({ userEmail }: SearchConsoleClientProps) {
     }
   };
 
-  const fetchGscData = async () => {
-    setLoading(true);
+  const loadSites = async () => {
     try {
       const email = encodeURIComponent(userEmail);
-      // First get user's sites to find the right siteUrl
-      const sitesRes = await fetch(
-        `https://api.seobandwagon.dev/api/gsc/sites?email=${email}`
-      );
+      const sitesRes = await fetch(`https://api.seobandwagon.dev/api/gsc/sites?email=${email}`);
       const sitesData = await sitesRes.json();
       const sites: string[] = (sitesData.sites || []).map((s: { siteUrl: string }) => s.siteUrl);
       setAllSites(sites);
-
-      // Use persisted site if available and still valid, otherwise first site
       const persisted = localStorage.getItem("gsc_selected_site");
       const siteUrl = (persisted && sites.includes(persisted)) ? persisted : sites[0];
-
-      if (!siteUrl) {
-        // User has GSC connected but no verified sites
-        setLoading(false);
-        return;
+      if (siteUrl) {
+        setSite(siteUrl);
+        localStorage.setItem("gsc_selected_site", siteUrl);
       }
+    } catch (err) {
+      console.error("Failed to load GSC sites:", err);
+    }
+  };
 
-      setSite(siteUrl);
-      localStorage.setItem("gsc_selected_site", siteUrl);
+  const fetchGscData = async (siteUrl: string) => {
+    setLoading(true);
+    try {
+      const email = encodeURIComponent(userEmail);
       const site = encodeURIComponent(siteUrl);
 
       const [queriesRes, pagesRes, perfRes] = await Promise.allSettled([
@@ -210,8 +216,9 @@ export function SearchConsoleClient({ userEmail }: SearchConsoleClientProps) {
           <select
             value={site}
             onChange={(e) => {
-              setSite(e.target.value);
-              localStorage.setItem("gsc_selected_site", e.target.value);
+              const val = e.target.value;
+              setSite(val);
+              localStorage.setItem("gsc_selected_site", val);
             }}
             className="bg-[#F5F5F5]/5 border border-pink/30 rounded-lg px-3 py-2 text-sm text-[#F5F5F5] cursor-pointer"
           >
