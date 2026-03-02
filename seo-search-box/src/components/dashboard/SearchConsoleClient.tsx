@@ -292,118 +292,8 @@ export function SearchConsoleClient({ userEmail }: SearchConsoleClientProps) {
         )}
       </div>
 
-      {/* Tables */}
-      <div className="grid md:grid-cols-2 gap-6">
-        {/* Top Queries */}
-        <div className="rounded-xl bg-[#000022] border-2 border-pink/30 p-6">
-          <h2 className="text-base font-heading text-[#F5F5F5] tracking-wide mb-4">
-            Top Queries
-          </h2>
-          {queries.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-pink/20">
-                    <th className="text-left py-2 px-2 text-xs font-medium text-[#F5F5F5]/40 uppercase">
-                      Query
-                    </th>
-                    <th className="text-right py-2 px-2 text-xs font-medium text-[#F5F5F5]/40 uppercase">
-                      Clicks
-                    </th>
-                    <th className="text-right py-2 px-2 text-xs font-medium text-[#F5F5F5]/40 uppercase">
-                      Impr
-                    </th>
-                    <th className="text-right py-2 px-2 text-xs font-medium text-[#F5F5F5]/40 uppercase">
-                      CTR
-                    </th>
-                    <th className="text-right py-2 px-2 text-xs font-medium text-[#F5F5F5]/40 uppercase">
-                      Pos
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {queries.map((q, i) => (
-                    <tr key={i} className="border-b border-[#F5F5F5]/5 hover:bg-[#F5F5F5]/5">
-                      <td className="py-2 px-2 text-sm text-[#F5F5F5]">
-                        {q.query}
-                      </td>
-                      <td className="py-2 px-2 text-sm text-[#F5F5F5]/70 text-right">
-                        {q.clicks}
-                      </td>
-                      <td className="py-2 px-2 text-sm text-[#F5F5F5]/70 text-right">
-                        {q.impressions}
-                      </td>
-                      <td className="py-2 px-2 text-sm text-[#F5F5F5]/70 text-right">
-                        {(q.ctr * 100).toFixed(1)}%
-                      </td>
-                      <td className="py-2 px-2 text-sm text-[#F5F5F5]/70 text-right">
-                        {q.position.toFixed(1)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <EmptyTable message="Connect GSC to see your top queries" />
-          )}
-        </div>
-
-        {/* Top Pages */}
-        <div className="rounded-xl bg-[#000022] border-2 border-pink/30 p-6">
-          <h2 className="text-base font-heading text-[#F5F5F5] tracking-wide mb-4">
-            Top Pages
-          </h2>
-          {pages.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-pink/20">
-                    <th className="text-left py-2 px-2 text-xs font-medium text-[#F5F5F5]/40 uppercase">
-                      Page
-                    </th>
-                    <th className="text-right py-2 px-2 text-xs font-medium text-[#F5F5F5]/40 uppercase">
-                      Clicks
-                    </th>
-                    <th className="text-right py-2 px-2 text-xs font-medium text-[#F5F5F5]/40 uppercase">
-                      Impr
-                    </th>
-                    <th className="text-right py-2 px-2 text-xs font-medium text-[#F5F5F5]/40 uppercase">
-                      CTR
-                    </th>
-                    <th className="text-right py-2 px-2 text-xs font-medium text-[#F5F5F5]/40 uppercase">
-                      Pos
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pages.map((p, i) => (
-                    <tr key={i} className="border-b border-[#F5F5F5]/5 hover:bg-[#F5F5F5]/5">
-                      <td className="py-2 px-2 text-sm text-[#F5F5F5] truncate max-w-[200px]">
-                        {p.page.replace(/^https?:\/\//, "")}
-                      </td>
-                      <td className="py-2 px-2 text-sm text-[#F5F5F5]/70 text-right">
-                        {p.clicks}
-                      </td>
-                      <td className="py-2 px-2 text-sm text-[#F5F5F5]/70 text-right">
-                        {p.impressions}
-                      </td>
-                      <td className="py-2 px-2 text-sm text-[#F5F5F5]/70 text-right">
-                        {(p.ctr * 100).toFixed(1)}%
-                      </td>
-                      <td className="py-2 px-2 text-sm text-[#F5F5F5]/70 text-right">
-                        {p.position.toFixed(1)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <EmptyTable message="Connect GSC to see your top pages" />
-          )}
-        </div>
-      </div>
+      {/* Tabbed Queries / Pages Table */}
+      <GscDataTable queries={queries} pages={pages} />
     </div>
   );
 }
@@ -434,6 +324,116 @@ function EmptyTable({ message }: { message: string }) {
   return (
     <div className="h-[200px] flex items-center justify-center">
       <p className="text-[#F5F5F5]/30 text-sm">{message}</p>
+    </div>
+  );
+}
+
+type SortKey = "clicks" | "impressions" | "ctr" | "position";
+type SortDir = "asc" | "desc";
+
+function GscDataTable({ queries, pages }: { queries: QueryRow[]; pages: PageRow[] }) {
+  const [tab, setTab] = useState<"queries" | "pages">("queries");
+  const [filter, setFilter] = useState("");
+  const [sortKey, setSortKey] = useState<SortKey>("clicks");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
+
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir(sortDir === "desc" ? "asc" : "desc");
+    } else {
+      setSortKey(key);
+      setSortDir("desc");
+    }
+  };
+
+  const sortIcon = (key: SortKey) => {
+    if (sortKey !== key) return <ArrowUpDown className="h-3 w-3 opacity-30 inline ml-1" />;
+    return sortDir === "desc"
+      ? <TrendingDown className="h-3 w-3 text-pink inline ml-1" />
+      : <TrendingUp className="h-3 w-3 text-pink inline ml-1" />;
+  };
+
+  const rows = tab === "queries"
+    ? queries
+        .filter((q) => q.query.toLowerCase().includes(filter.toLowerCase()))
+        .sort((a, b) => sortDir === "desc" ? b[sortKey] - a[sortKey] : a[sortKey] - b[sortKey])
+    : pages
+        .filter((p) => p.page.toLowerCase().includes(filter.toLowerCase()))
+        .sort((a, b) => sortDir === "desc" ? b[sortKey] - a[sortKey] : a[sortKey] - b[sortKey]);
+
+  const labelKey = tab === "queries" ? "query" : "page";
+
+  return (
+    <div className="rounded-xl bg-[#000022] border-2 border-pink/30 p-6">
+      {/* Tabs + filter */}
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
+        <div className="flex gap-1 bg-[#F5F5F5]/5 rounded-lg p-1 w-fit">
+          {(["queries", "pages"] as const).map((t) => (
+            <button
+              key={t}
+              onClick={() => { setTab(t); setFilter(""); }}
+              className={`px-4 py-1.5 rounded-md text-xs font-medium transition-colors border-none cursor-pointer capitalize ${
+                tab === t ? "bg-pink text-white" : "bg-transparent text-[#F5F5F5]/50 hover:text-[#F5F5F5]"
+              }`}
+            >
+              {t === "queries" ? `Queries (${queries.length})` : `Pages (${pages.length})`}
+            </button>
+          ))}
+        </div>
+        <div className="relative flex-1 max-w-xs">
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#F5F5F5]/30" />
+          <input
+            type="text"
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            placeholder={`Filter ${tab}…`}
+            className="w-full bg-[#F5F5F5]/5 border border-pink/20 rounded-lg pl-7 pr-3 py-1.5 text-xs text-[#F5F5F5] placeholder-[#F5F5F5]/30 outline-none focus:border-pink/50"
+          />
+        </div>
+        <span className="text-xs text-[#F5F5F5]/30 ml-auto">{rows.length} results</span>
+      </div>
+
+      {rows.length > 0 ? (
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-pink/20">
+                <th className="text-left py-2 px-2 text-xs font-medium text-[#F5F5F5]/40 uppercase">
+                  {tab === "queries" ? "Query" : "Page"}
+                </th>
+                {(["clicks", "impressions", "ctr", "position"] as SortKey[]).map((key) => (
+                  <th key={key} className="text-right py-2 px-2 text-xs font-medium text-[#F5F5F5]/40 uppercase cursor-pointer hover:text-pink select-none"
+                      onClick={() => handleSort(key)}>
+                    {key === "ctr" ? "CTR" : key === "position" ? "Pos" : key.charAt(0).toUpperCase() + key.slice(1)}
+                    {sortIcon(key)}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row, i) => {
+                const label = tab === "queries" ? (row as QueryRow).query : (row as PageRow).page;
+                const display = tab === "pages" ? label.replace(/^https?:\/\//, "") : label;
+                return (
+                  <tr key={i} className="border-b border-[#F5F5F5]/5 hover:bg-[#F5F5F5]/5">
+                    <td className="py-2 px-2 text-sm text-[#F5F5F5] truncate max-w-[320px]" title={label}>
+                      {tab === "pages"
+                        ? <a href={label} target="_blank" rel="noopener noreferrer" className="hover:text-pink transition-colors">{display}</a>
+                        : display}
+                    </td>
+                    <td className="py-2 px-2 text-sm text-[#F5F5F5]/70 text-right">{row.clicks.toLocaleString()}</td>
+                    <td className="py-2 px-2 text-sm text-[#F5F5F5]/70 text-right">{row.impressions.toLocaleString()}</td>
+                    <td className="py-2 px-2 text-sm text-[#F5F5F5]/70 text-right">{(row.ctr * 100).toFixed(1)}%</td>
+                    <td className="py-2 px-2 text-sm text-[#F5F5F5]/70 text-right">{row.position.toFixed(1)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <EmptyTable message={filter ? `No ${tab} match "${filter}"` : `Connect GSC to see your top ${tab}`} />
+      )}
     </div>
   );
 }
