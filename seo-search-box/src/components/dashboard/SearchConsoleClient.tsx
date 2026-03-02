@@ -57,6 +57,7 @@ export function SearchConsoleClient({ userEmail }: SearchConsoleClientProps) {
   const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState<DateRange>("28d");
   const [site, setSite] = useState<string>("");
+  const [allSites, setAllSites] = useState<string[]>([]);
 
   // TODO: Replace with real GSC API proxy once /api/gsc route is built
   // These will be populated by fetching from api.seobandwagon.dev GSC tools
@@ -73,10 +74,10 @@ export function SearchConsoleClient({ userEmail }: SearchConsoleClientProps) {
   }, []);
 
   useEffect(() => {
-    if (gscStatus?.connected) {
+    if (gscStatus?.connected && site) {
       fetchGscData();
     }
-  }, [gscStatus?.connected, dateRange]);
+  }, [gscStatus?.connected, dateRange, site]);
 
   const checkConnection = async () => {
     try {
@@ -101,7 +102,12 @@ export function SearchConsoleClient({ userEmail }: SearchConsoleClientProps) {
         `https://api.seobandwagon.dev/api/gsc/sites?email=${email}`
       );
       const sitesData = await sitesRes.json();
-      const siteUrl = sitesData.sites?.[0]?.siteUrl;
+      const sites: string[] = (sitesData.sites || []).map((s: { siteUrl: string }) => s.siteUrl);
+      setAllSites(sites);
+
+      // Use persisted site if available and still valid, otherwise first site
+      const persisted = localStorage.getItem("gsc_selected_site");
+      const siteUrl = (persisted && sites.includes(persisted)) ? persisted : sites[0];
 
       if (!siteUrl) {
         // User has GSC connected but no verified sites
@@ -110,6 +116,7 @@ export function SearchConsoleClient({ userEmail }: SearchConsoleClientProps) {
       }
 
       setSite(siteUrl);
+      localStorage.setItem("gsc_selected_site", siteUrl);
       const site = encodeURIComponent(siteUrl);
 
       const [queriesRes, pagesRes, perfRes] = await Promise.allSettled([
@@ -197,6 +204,24 @@ export function SearchConsoleClient({ userEmail }: SearchConsoleClientProps) {
             Connected as {gscStatus.email || userEmail}
           </p>
         </div>
+
+        {/* Site Selector */}
+        {allSites.length > 1 && (
+          <select
+            value={site}
+            onChange={(e) => {
+              setSite(e.target.value);
+              localStorage.setItem("gsc_selected_site", e.target.value);
+            }}
+            className="bg-[#F5F5F5]/5 border border-pink/30 rounded-lg px-3 py-2 text-sm text-[#F5F5F5] cursor-pointer"
+          >
+            {allSites.map((s) => (
+              <option key={s} value={s} className="bg-[#000022]">
+                {s.replace(/^sc-domain:|https?:\/\//, "")}
+              </option>
+            ))}
+          </select>
+        )}
 
         {/* Date Range */}
         <div className="flex items-center gap-1 bg-[#F5F5F5]/5 rounded-lg p-1">
