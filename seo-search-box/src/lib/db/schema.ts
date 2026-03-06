@@ -392,6 +392,22 @@ export const extensionAnalyses = pgTable(
 );
 
 // ============================================
+// Clients Table
+// ============================================
+
+export const clients = pgTable("clients", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  name: text("name").notNull(),
+  contactEmail: text("contact_email"),
+  gscSiteUrl: text("gsc_site_url"),
+  ga4PropertyId: text("ga4_property_id"),
+  notes: text("notes"),
+  status: text("status").default("active"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// ============================================
 // Relations
 // ============================================
 
