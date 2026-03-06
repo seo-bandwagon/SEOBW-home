@@ -9,9 +9,6 @@ import {
   Eye,
   Target,
   BarChart3,
-  TrendingUp,
-  TrendingDown,
-  Calendar,
   Download,
   Loader2,
 } from "lucide-react";
@@ -58,6 +55,7 @@ export function ClientReport({
   const [client, setClient] = useState<Client | null>(null);
   const [loading, setLoading] = useState(true);
   const [dataLoading, setDataLoading] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [dateRange, setDateRange] = useState<DateRange>("28d");
   const [error, setError] = useState<string | null>(null);
 
@@ -142,6 +140,94 @@ export function ClientReport({
     }
   };
 
+  const exportPDF = async () => {
+    if (!client) return;
+    setExporting(true);
+    
+    try {
+      const { jsPDF } = await import("jspdf");
+      const autoTable = (await import("jspdf-autotable")).default;
+      
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+      
+      // Title
+      doc.setFontSize(20);
+      doc.text(client.name, pageWidth / 2, 20, { align: "center" });
+      
+      doc.setFontSize(12);
+      doc.setTextColor(100);
+      doc.text(client.gsc_site_url?.replace("sc-domain:", "") || "", pageWidth / 2, 28, { align: "center" });
+      
+      const rangeText = dateRange === "7d" ? "Last 7 Days" : dateRange === "28d" ? "Last 28 Days" : "Last 3 Months";
+      doc.text(`Report Period: ${rangeText}`, pageWidth / 2, 36, { align: "center" });
+      doc.text(`Generated: ${new Date().toLocaleDateString()}`, pageWidth / 2, 42, { align: "center" });
+      
+      // Metrics
+      doc.setTextColor(0);
+      doc.setFontSize(14);
+      doc.text("Performance Summary", 14, 55);
+      
+      doc.setFontSize(11);
+      doc.text(`Total Clicks: ${totals.clicks.toLocaleString()}`, 14, 65);
+      doc.text(`Total Impressions: ${totals.impressions.toLocaleString()}`, 14, 72);
+      doc.text(`Average CTR: ${(totals.ctr * 100).toFixed(1)}%`, 14, 79);
+      doc.text(`Average Position: ${totals.position.toFixed(1)}`, 14, 86);
+      
+      // Top Queries Table
+      if (queries.length > 0) {
+        doc.setFontSize(14);
+        doc.text("Top Queries", 14, 100);
+        
+        autoTable(doc, {
+          startY: 105,
+          head: [["Query", "Clicks", "Impressions", "CTR", "Position"]],
+          body: queries.slice(0, 15).map(q => [
+            q.query,
+            q.clicks.toString(),
+            q.impressions.toString(),
+            `${(q.ctr * 100).toFixed(1)}%`,
+            q.position.toFixed(1)
+          ]),
+          styles: { fontSize: 9 },
+          headStyles: { fillColor: [255, 20, 147] },
+        });
+      }
+      
+      // Top Pages Table
+      if (pages.length > 0) {
+        const finalY = (doc as any).lastAutoTable?.finalY || 150;
+        if (finalY > 200) doc.addPage();
+        
+        const startY = finalY > 200 ? 20 : finalY + 15;
+        doc.setFontSize(14);
+        doc.text("Top Pages", 14, startY);
+        
+        autoTable(doc, {
+          startY: startY + 5,
+          head: [["Page", "Clicks", "Impressions", "CTR", "Position"]],
+          body: pages.slice(0, 15).map(p => [
+            p.page.replace(/^https?:\/\/[^/]+/, "").substring(0, 40),
+            p.clicks.toString(),
+            p.impressions.toString(),
+            `${(p.ctr * 100).toFixed(1)}%`,
+            p.position.toFixed(1)
+          ]),
+          styles: { fontSize: 9 },
+          headStyles: { fillColor: [255, 20, 147] },
+        });
+      }
+      
+      // Save
+      const filename = `${client.name.replace(/[^a-z0-9]/gi, "_")}_report_${dateRange}.pdf`;
+      doc.save(filename);
+    } catch (err) {
+      console.error("PDF export error:", err);
+    } finally {
+      setExporting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -206,6 +292,19 @@ export function ClientReport({
               </button>
             ))}
           </div>
+
+          <button
+            onClick={exportPDF}
+            disabled={exporting || !queries.length}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg bg-pink hover:bg-pink/80 text-white text-sm font-medium disabled:opacity-50"
+          >
+            {exporting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="h-4 w-4" />
+            )}
+            Export PDF
+          </button>
 
           <button
             onClick={fetchGscData}
