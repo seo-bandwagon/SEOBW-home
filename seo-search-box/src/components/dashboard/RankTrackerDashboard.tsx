@@ -130,7 +130,7 @@ export function RankTrackerDashboard({ defaultDomain }: { defaultDomain: string 
           body: JSON.stringify({ domain, checkAll: true }),
         });
       } else {
-        const nullKeywords = keywords.filter((k) => k.last_position === null).slice(0, 10);
+        const nullKeywords = keywords.filter((k) => !k.last_checked_at).slice(0, 10);
         if (nullKeywords.length === 0) return;
         await fetch("/api/dashboard/rank-tracker", {
           method: "POST",
@@ -239,11 +239,11 @@ export function RankTrackerDashboard({ defaultDomain }: { defaultDomain: string 
           <button
             onClick={() => checkPositions(true)}
             disabled={checking || loading}
-            title={`Check all ${keywords.filter(k => k.last_position === null).length} unchecked keywords`}
+            title={`Check all ${keywords.filter(k => !k.last_checked_at).length} unchecked keywords`}
             className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors"
           >
             <RefreshCw className={`h-4 w-4 ${checking ? "animate-spin" : ""}`} />
-            {checking ? "Checking all…" : `Check All (${keywords.filter(k => k.last_position === null).length})`}
+            {checking ? "Checking all…" : `Check All (${keywords.filter(k => !k.last_checked_at).length})`}
           </button>
         </div>
       </div>
@@ -333,7 +333,11 @@ export function RankTrackerDashboard({ defaultDomain }: { defaultDomain: string 
                   <tr key={kw.id} className="border-b border-[#F5F5F5]/5 hover:bg-[#F5F5F5]/2">
                     <td className="py-2.5 px-3 text-[#F5F5F5]/80">{kw.keyword}</td>
                     <td className={`py-2.5 px-3 font-mono font-bold ${getPositionColor(kw.last_position)}`}>
-                      {kw.last_position ?? "—"}
+                      {kw.last_position !== null
+                        ? kw.last_position
+                        : kw.last_checked_at
+                          ? <span className="text-xs font-normal text-[#F5F5F5]/30">NR</span>
+                          : <span className="text-xs font-normal text-[#F5F5F5]/20">—</span>}
                     </td>
                     <td className="py-2.5 px-3 text-[#F5F5F5]/40">—</td>
                     <td className="py-2.5 px-3 text-[#F5F5F5]/70 font-mono">
