@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
         avgPosition,
         top10: top10.length,
         top3: top3.length,
-        totalVolume: keywords.reduce((sum: number, k: any) => sum + (k.search_volume ?? 0), 0),
+        totalVolume: keywords.filter((k: any) => k.search_volume !== null).reduce((sum: number, k: any) => sum + k.search_volume, 0),
         avgVolume: keywords.filter((k: any) => k.search_volume !== null).length > 0
           ? Math.round(keywords.filter((k: any) => k.search_volume !== null).reduce((sum: number, k: any) => sum + k.search_volume, 0) / keywords.filter((k: any) => k.search_volume !== null).length)
           : null,
