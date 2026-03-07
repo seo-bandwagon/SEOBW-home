@@ -1,32 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
-
-const SUPABASE_URL = process.env.SUPABASE_URL || "https://rraubczrlpaushskzpfc.supabase.co";
-const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || "";
+import { db } from "@/lib/db/client";
+import { sql } from "drizzle-orm";
 
 // GET /api/keywords - List all tracked keywords
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const domain = searchParams.get("domain");
-  
+
   try {
-    let url = `${SUPABASE_URL}/rest/v1/tracked_keywords?select=*&order=domain.asc,keyword.asc`;
-    
-    if (domain) {
-      url += `&domain=eq.${encodeURIComponent(domain)}`;
-    }
-    
-    const res = await fetch(url, {
-      headers: {
-        "apikey": SUPABASE_KEY,
-        "Authorization": `Bearer ${SUPABASE_KEY}`,
-      },
-    });
-    
-    if (!res.ok) {
-      throw new Error("Failed to fetch keywords");
-    }
-    
-    const keywords = await res.json();
+    const query = domain
+      ? sql`SELECT * FROM tracked_keywords WHERE domain = ${domain} ORDER BY search_volume_monthly DESC NULLS LAST, keyword ASC`
+      : sql`SELECT * FROM tracked_keywords ORDER BY domain ASC, search_volume_monthly DESC NULLS LAST, keyword ASC`;
+
+    const keywords = await db.execute(query);
     return NextResponse.json({ keywords });
   } catch (error) {
     console.error("Error fetching keywords:", error);
