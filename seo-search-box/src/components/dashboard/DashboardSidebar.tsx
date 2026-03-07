@@ -11,11 +11,13 @@ import {
   Bell,
   Globe,
   Users,
+  Target,
 } from "lucide-react";
 
 const navItems = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
   { href: "/dashboard/clients", label: "Clients", icon: Users },
+  { href: "/dashboard/keywords", label: "Keywords", icon: Target },
   { href: "/dashboard/search-console", label: "Search Console", icon: Search },
   { href: "/dashboard/site-health", label: "Site Health", icon: HeartPulse },
   { href: "/dashboard/wiki-analysis", label: "Wiki Analysis", icon: Globe },
