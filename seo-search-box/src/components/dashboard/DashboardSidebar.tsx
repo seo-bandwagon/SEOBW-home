@@ -12,6 +12,7 @@ import {
   Globe,
   Users,
   Target,
+  TrendingUp,
 } from "lucide-react";
 
 const navItems = [
@@ -21,7 +22,7 @@ const navItems = [
   { href: "/dashboard/search-console", label: "Search Console", icon: Search },
   { href: "/dashboard/site-health", label: "Site Health", icon: HeartPulse },
   { href: "/dashboard/wiki-analysis", label: "Wiki Analysis", icon: Globe },
-  { href: "/dashboard/clients", label: "Clients", icon: Users },
+  { href: "/dashboard/rank-tracker", label: "Rank Tracker", icon: TrendingUp },
   { href: "/history", label: "History", icon: History },
   { href: "/saved-searches", label: "Saved Searches", icon: Bookmark },
   { href: "/alerts", label: "Alerts", icon: Bell },
