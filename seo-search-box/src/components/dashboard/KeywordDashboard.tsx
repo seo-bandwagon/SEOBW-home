@@ -3,15 +3,11 @@
 import { useState, useEffect, useMemo } from "react";
 import {
   Search,
-  Filter,
   RefreshCw,
-  TrendingUp,
-  TrendingDown,
-  Minus,
   Target,
-  BarChart3,
   Loader2,
-  ChevronDown,
+  TrendingUp,
+  Calendar,
 } from "lucide-react";
 
 interface TrackedKeyword {
@@ -21,6 +17,9 @@ interface TrackedKeyword {
   last_position: number | null;
   last_checked_at: string | null;
   created_at: string;
+  search_volume_monthly: number | null;
+  search_volume_annual: number | null;
+  volume_updated_at: string | null;
 }
 
 interface DomainStats {
@@ -30,15 +29,19 @@ interface DomainStats {
   top20: number;
   top50: number;
   unranked: number;
+  totalVolume: number;
 }
+
+type VolumeDisplay = "monthly" | "annual";
 
 export function KeywordDashboard() {
   const [keywords, setKeywords] = useState<TrackedKeyword[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [selectedDomain, setSelectedDomain] = useState<string>("all");
-  const [sortBy, setSortBy] = useState<"keyword" | "position" | "created">("position");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const [sortBy, setSortBy] = useState<"keyword" | "position" | "volume" | "created">("volume");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const [volumeDisplay, setVolumeDisplay] = useState<VolumeDisplay>("monthly");
 
   useEffect(() => {
     fetchKeywords();
@@ -75,9 +78,11 @@ export function KeywordDashboard() {
           top20: 0,
           top50: 0,
           unranked: 0,
+          totalVolume: 0,
         };
       }
       stats[k.domain].total++;
+      stats[k.domain].totalVolume += k.search_volume_monthly || 0;
       
       if (k.last_position === null) {
         stats[k.domain].unranked++;
@@ -111,6 +116,10 @@ export function KeywordDashboard() {
         const posA = a.last_position ?? 999;
         const posB = b.last_position ?? 999;
         cmp = posA - posB;
+      } else if (sortBy === "volume") {
+        const volA = a.search_volume_monthly ?? 0;
+        const volB = b.search_volume_monthly ?? 0;
+        cmp = volA - volB;
       } else {
         cmp = new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       }
@@ -119,6 +128,14 @@ export function KeywordDashboard() {
 
     return filtered;
   }, [keywords, search, selectedDomain, sortBy, sortDir]);
+
+  // Format volume with K/M suffix
+  const formatVolume = (vol: number | null) => {
+    if (vol === null || vol === 0) return "—";
+    if (vol >= 1000000) return `${(vol / 1000000).toFixed(1)}M`;
+    if (vol >= 1000) return `${(vol / 1000).toFixed(1)}K`;
+    return vol.toLocaleString();
+  };
 
   // Position color helper
   const getPositionColor = (pos: number | null) => {
@@ -147,6 +164,10 @@ export function KeywordDashboard() {
     );
   }
 
+  // Total volumes
+  const totalMonthly = keywords.reduce((sum, k) => sum + (k.search_volume_monthly || 0), 0);
+  const totalAnnual = keywords.reduce((sum, k) => sum + (k.search_volume_annual || 0), 0);
+
   return (
     <div className="max-w-7xl">
       {/* Header */}
@@ -159,12 +180,57 @@ export function KeywordDashboard() {
             {keywords.length} keywords across {domains.length} domains
           </p>
         </div>
-        <button
-          onClick={fetchKeywords}
-          className="p-2 rounded-lg bg-[#F5F5F5]/5 text-[#F5F5F5]/60 hover:text-[#F5F5F5]"
-        >
-          <RefreshCw className="h-4 w-4" />
-        </button>
+        <div className="flex items-center gap-3">
+          {/* Volume period toggle */}
+          <div className="flex items-center gap-1 bg-[#F5F5F5]/5 rounded-lg p-1">
+            <button
+              onClick={() => setVolumeDisplay("monthly")}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors border-none cursor-pointer ${
+                volumeDisplay === "monthly"
+                  ? "bg-pink text-white"
+                  : "bg-transparent text-[#F5F5F5]/50 hover:text-[#F5F5F5]"
+              }`}
+            >
+              30 Day
+            </button>
+            <button
+              onClick={() => setVolumeDisplay("annual")}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors border-none cursor-pointer ${
+                volumeDisplay === "annual"
+                  ? "bg-pink text-white"
+                  : "bg-transparent text-[#F5F5F5]/50 hover:text-[#F5F5F5]"
+              }`}
+            >
+              Annual
+            </button>
+          </div>
+          <button
+            onClick={fetchKeywords}
+            className="p-2 rounded-lg bg-[#F5F5F5]/5 text-[#F5F5F5]/60 hover:text-[#F5F5F5]"
+          >
+            <RefreshCw className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* Volume Summary */}
+      <div className="grid grid-cols-2 gap-4 mb-6">
+        <div className="rounded-xl bg-[#000022] border-2 border-pink/30 p-4">
+          <div className="flex items-center gap-2 mb-1">
+            <TrendingUp className="h-4 w-4 text-blue-400" />
+            <span className="text-xs text-[#F5F5F5]/40">Monthly Volume</span>
+          </div>
+          <p className="text-2xl font-bold text-[#F5F5F5]">{formatVolume(totalMonthly)}</p>
+          <p className="text-xs text-[#F5F5F5]/30">searches/month</p>
+        </div>
+        <div className="rounded-xl bg-[#000022] border-2 border-pink/30 p-4">
+          <div className="flex items-center gap-2 mb-1">
+            <Calendar className="h-4 w-4 text-purple-400" />
+            <span className="text-xs text-[#F5F5F5]/40">Annual Volume</span>
+          </div>
+          <p className="text-2xl font-bold text-[#F5F5F5]">{formatVolume(totalAnnual)}</p>
+          <p className="text-xs text-[#F5F5F5]/30">searches/year</p>
+        </div>
       </div>
 
       {/* Domain Stats Cards */}
@@ -179,28 +245,31 @@ export function KeywordDashboard() {
                 : "bg-[#000022] border-pink/30 hover:border-pink/50"
             }`}
           >
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center justify-between mb-2">
               <span className="text-[#F5F5F5] font-medium truncate">
                 {stat.domain}
               </span>
               <span className="text-[#F5F5F5]/40 text-sm">{stat.total} kw</span>
             </div>
+            <div className="text-sm text-[#F5F5F5]/60 mb-3">
+              {formatVolume(stat.totalVolume)} monthly volume
+            </div>
             <div className="flex gap-2">
               <div className="flex-1 text-center py-1 rounded bg-green-500/20">
-                <div className="text-green-400 font-bold">{stat.top10}</div>
-                <div className="text-[10px] text-green-400/70">Top 10</div>
+                <div className="text-green-400 font-bold text-sm">{stat.top10}</div>
+                <div className="text-[9px] text-green-400/70">Top 10</div>
               </div>
               <div className="flex-1 text-center py-1 rounded bg-yellow-500/20">
-                <div className="text-yellow-400 font-bold">{stat.top20}</div>
-                <div className="text-[10px] text-yellow-400/70">11-20</div>
+                <div className="text-yellow-400 font-bold text-sm">{stat.top20}</div>
+                <div className="text-[9px] text-yellow-400/70">11-20</div>
               </div>
               <div className="flex-1 text-center py-1 rounded bg-orange-500/20">
-                <div className="text-orange-400 font-bold">{stat.top50}</div>
-                <div className="text-[10px] text-orange-400/70">21-50</div>
+                <div className="text-orange-400 font-bold text-sm">{stat.top50}</div>
+                <div className="text-[9px] text-orange-400/70">21-50</div>
               </div>
               <div className="flex-1 text-center py-1 rounded bg-[#F5F5F5]/5">
-                <div className="text-[#F5F5F5]/50 font-bold">{stat.unranked}</div>
-                <div className="text-[10px] text-[#F5F5F5]/30">50+</div>
+                <div className="text-[#F5F5F5]/50 font-bold text-sm">{stat.unranked}</div>
+                <div className="text-[9px] text-[#F5F5F5]/30">50+</div>
               </div>
             </div>
           </button>
@@ -240,12 +309,12 @@ export function KeywordDashboard() {
           }}
           className="px-4 py-2 rounded-lg bg-[#F5F5F5]/5 border border-[#F5F5F5]/10 text-[#F5F5F5] focus:outline-none focus:border-pink/50"
         >
+          <option value="volume-desc">Volume (High to Low)</option>
+          <option value="volume-asc">Volume (Low to High)</option>
           <option value="position-asc">Position (Best First)</option>
           <option value="position-desc">Position (Worst First)</option>
           <option value="keyword-asc">Keyword (A-Z)</option>
           <option value="keyword-desc">Keyword (Z-A)</option>
-          <option value="created-desc">Newest First</option>
-          <option value="created-asc">Oldest First</option>
         </select>
       </div>
 
@@ -269,6 +338,9 @@ export function KeywordDashboard() {
                 <th className="text-center py-3 px-4 text-xs font-medium text-[#F5F5F5]/60 uppercase w-24">
                   Position
                 </th>
+                <th className="text-right py-3 px-4 text-xs font-medium text-[#F5F5F5]/60 uppercase w-32">
+                  {volumeDisplay === "monthly" ? "Monthly Vol" : "Annual Vol"}
+                </th>
                 <th className="text-right py-3 px-4 text-xs font-medium text-[#F5F5F5]/60 uppercase">
                   Last Checked
                 </th>
@@ -277,7 +349,7 @@ export function KeywordDashboard() {
             <tbody>
               {filteredKeywords.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="py-12 text-center text-[#F5F5F5]/30">
+                  <td colSpan={5} className="py-12 text-center text-[#F5F5F5]/30">
                     No keywords found
                   </td>
                 </tr>
@@ -297,6 +369,13 @@ export function KeywordDashboard() {
                       >
                         {kw.last_position ?? "—"}
                       </span>
+                    </td>
+                    <td className="py-3 px-4 text-right text-[#F5F5F5]/70">
+                      {formatVolume(
+                        volumeDisplay === "monthly"
+                          ? kw.search_volume_monthly
+                          : kw.search_volume_annual
+                      )}
                     </td>
                     <td className="py-3 px-4 text-right text-[#F5F5F5]/40 text-sm">
                       {kw.last_checked_at
