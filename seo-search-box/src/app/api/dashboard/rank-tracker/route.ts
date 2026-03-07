@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const keywords = await db.execute(
-      sql`SELECT id, keyword, domain, last_position, last_checked_at, search_volume_monthly AS search_volume, search_volume_annual AS annual_volume, NULL AS monthly_searches, NULL AS competition, volume_updated_at, created_at FROM tracked_keywords WHERE domain = ${domain} ORDER BY last_position ASC NULLS LAST, created_at DESC`
+      sql`SELECT id, keyword, domain, last_position, last_checked_at, search_volume_monthly AS search_volume, search_volume_annual AS annual_volume, monthly_searches, competition, competition_index, cpc, low_top_of_page_bid, high_top_of_page_bid, volume_updated_at, created_at FROM tracked_keywords WHERE domain = ${domain} ORDER BY last_position ASC NULLS LAST, created_at DESC`
     ) as any[];
 
     const ranked = keywords.filter((k: any) => k.last_position !== null);
