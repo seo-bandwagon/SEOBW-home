@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const keywords = await db.execute(
-      sql`SELECT * FROM tracked_keywords WHERE domain = ${domain} ORDER BY last_position ASC NULLS LAST, created_at DESC`
+      sql`SELECT id, keyword, domain, last_position, last_checked_at, search_volume, annual_volume, monthly_searches, competition, volume_updated_at, created_at FROM tracked_keywords WHERE domain = ${domain} ORDER BY last_position ASC NULLS LAST, created_at DESC`
     ) as any[];
 
     const ranked = keywords.filter((k: any) => k.last_position !== null);
@@ -37,6 +37,10 @@ export async function GET(request: NextRequest) {
         avgPosition,
         top10: top10.length,
         top3: top3.length,
+        totalVolume: keywords.reduce((sum: number, k: any) => sum + (k.search_volume ?? 0), 0),
+        avgVolume: keywords.filter((k: any) => k.search_volume !== null).length > 0
+          ? Math.round(keywords.filter((k: any) => k.search_volume !== null).reduce((sum: number, k: any) => sum + k.search_volume, 0) / keywords.filter((k: any) => k.search_volume !== null).length)
+          : null,
       },
     });
   } catch (error) {

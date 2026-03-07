@@ -11,6 +11,11 @@ interface TrackedKeyword {
   user_id: string | null;
   last_position: number | null;
   last_checked_at: string | null;
+  search_volume: number | null;
+  annual_volume: number | null;
+  monthly_searches: { year: number; month: number; search_volume: number }[] | null;
+  competition: string | null;
+  volume_updated_at: string | null;
   created_at: string;
 }
 
@@ -21,6 +26,8 @@ interface Stats {
   avgPosition: number | null;
   top10: number;
   top3: number;
+  totalVolume: number;
+  avgVolume: number | null;
 }
 
 interface ApiResponse {
@@ -30,7 +37,7 @@ interface ApiResponse {
   stats: Stats;
 }
 
-type SortKey = "keyword" | "last_position" | "last_checked_at";
+type SortKey = "keyword" | "last_position" | "last_checked_at" | "search_volume" | "annual_volume";
 type SortDir = "asc" | "desc";
 
 function getPositionColor(pos: number | null): string {
@@ -68,6 +75,19 @@ function formatDate(ts: string | null): string {
   return new Date(ts).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
+function VolumeTrend({ monthly }: { monthly: { year: number; month: number; search_volume: number }[] | null }) {
+  if (!monthly || monthly.length < 6) return <span className="text-[#F5F5F5]/30">—</span>;
+
+  // Sort ascending by year/month
+  const sorted = [...monthly].sort((a, b) => a.year !== b.year ? a.year - b.year : a.month - b.month);
+  const last3 = sorted.slice(-3).reduce((s, m) => s + m.search_volume, 0);
+  const prior3 = sorted.slice(-6, -3).reduce((s, m) => s + m.search_volume, 0);
+
+  if (last3 > prior3 * 1.05) return <span className="text-green-400 text-base">↑</span>;
+  if (last3 < prior3 * 0.95) return <span className="text-red-400 text-base">↓</span>;
+  return <span className="text-[#F5F5F5]/40 text-base">→</span>;
+}
+
 const PAGE_SIZE = 50;
 
 export function RankTrackerDashboard({ defaultDomain }: { defaultDomain: string }) {
@@ -77,6 +97,7 @@ export function RankTrackerDashboard({ defaultDomain }: { defaultDomain: string 
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [checking, setChecking] = useState(false);
+  const [fetchingVolume, setFetchingVolume] = useState(false);
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("last_position");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
@@ -115,6 +136,20 @@ export function RankTrackerDashboard({ defaultDomain }: { defaultDomain: string 
     }
   }
 
+  async function fetchVolume() {
+    setFetchingVolume(true);
+    try {
+      await fetch("/api/dashboard/rank-tracker/volume", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ domain, limit: 100 }),
+      });
+      await fetchData(domain);
+    } finally {
+      setFetchingVolume(false);
+    }
+  }
+
   function handleSort(key: SortKey) {
     if (sortKey === key) {
       setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -135,6 +170,10 @@ export function RankTrackerDashboard({ defaultDomain }: { defaultDomain: string 
       if (sortKey === "last_position") {
         av = av === null ? 999999 : av;
         bv = bv === null ? 999999 : bv;
+      }
+      if (sortKey === "search_volume" || sortKey === "annual_volume") {
+        av = av === null ? -1 : av;
+        bv = bv === null ? -1 : bv;
       }
       if (av === null || av === undefined) av = "";
       if (bv === null || bv === undefined) bv = "";
@@ -174,6 +213,14 @@ export function RankTrackerDashboard({ defaultDomain }: { defaultDomain: string 
             ))}
           </select>
           <button
+            onClick={fetchVolume}
+            disabled={fetchingVolume || loading}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors"
+          >
+            <Search className={`h-4 w-4 ${fetchingVolume ? "animate-pulse" : ""}`} />
+            {fetchingVolume ? "Fetching…" : "Fetch Volume"}
+          </button>
+          <button
             onClick={checkPositions}
             disabled={checking || loading}
             className="flex items-center gap-2 px-4 py-2 bg-pink-500 hover:bg-pink-600 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors"
@@ -185,12 +232,14 @@ export function RankTrackerDashboard({ defaultDomain }: { defaultDomain: string 
       </div>
 
       {/* Stats cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         {[
           { label: "Total Keywords", value: stats?.total ?? "—" },
           { label: "Ranking", value: stats?.ranked ?? "—" },
           { label: "Top 10", value: stats?.top10 ?? "—" },
           { label: "Avg Position", value: stats?.avgPosition ?? "—" },
+          { label: "Avg Monthly Vol", value: stats?.avgVolume != null ? stats.avgVolume.toLocaleString() : "—" },
+          { label: "Total Monthly Vol", value: stats?.totalVolume ? stats.totalVolume.toLocaleString() : "—" },
         ].map(({ label, value }) => (
           <div
             key={label}
@@ -238,6 +287,9 @@ export function RankTrackerDashboard({ defaultDomain }: { defaultDomain: string 
                   { key: "keyword" as SortKey, label: "Keyword" },
                   { key: "last_position" as SortKey, label: "Position" },
                   { key: null, label: "Change" },
+                  { key: "search_volume" as SortKey, label: "Monthly Vol" },
+                  { key: "annual_volume" as SortKey, label: "Annual Vol" },
+                  { key: null, label: "Trend" },
                   { key: "last_checked_at" as SortKey, label: "Last Checked" },
                 ].map(({ key, label }) => (
                   <th
@@ -253,11 +305,11 @@ export function RankTrackerDashboard({ defaultDomain }: { defaultDomain: string 
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={4} className="text-center py-12 text-[#F5F5F5]/40">Loading…</td>
+                  <td colSpan={7} className="text-center py-12 text-[#F5F5F5]/40">Loading…</td>
                 </tr>
               ) : paginated.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="text-center py-12 text-[#F5F5F5]/40">No keywords found</td>
+                  <td colSpan={7} className="text-center py-12 text-[#F5F5F5]/40">No keywords found</td>
                 </tr>
               ) : (
                 paginated.map((kw) => (
@@ -267,6 +319,15 @@ export function RankTrackerDashboard({ defaultDomain }: { defaultDomain: string 
                       {kw.last_position ?? "—"}
                     </td>
                     <td className="py-2.5 px-3 text-[#F5F5F5]/40">—</td>
+                    <td className="py-2.5 px-3 text-[#F5F5F5]/70 font-mono">
+                      {kw.search_volume?.toLocaleString() ?? "—"}
+                    </td>
+                    <td className="py-2.5 px-3 text-[#F5F5F5]/70 font-mono">
+                      {kw.annual_volume?.toLocaleString() ?? "—"}
+                    </td>
+                    <td className="py-2.5 px-3">
+                      <VolumeTrend monthly={kw.monthly_searches} />
+                    </td>
                     <td className="py-2.5 px-3 text-[#F5F5F5]/50">{formatDate(kw.last_checked_at)}</td>
                   </tr>
                 ))
