@@ -120,16 +120,24 @@ export function RankTrackerDashboard({ defaultDomain }: { defaultDomain: string 
     fetchData(domain);
   }, [domain]);
 
-  async function checkPositions() {
-    const nullKeywords = keywords.filter((k) => k.last_position === null).slice(0, 10);
-    if (nullKeywords.length === 0) return;
+  async function checkPositions(all = false) {
     setChecking(true);
     try {
-      await fetch("/api/dashboard/rank-tracker", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ domain, keywords: nullKeywords.map((k) => k.keyword) }),
-      });
+      if (all) {
+        await fetch("/api/dashboard/rank-tracker", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ domain, checkAll: true }),
+        });
+      } else {
+        const nullKeywords = keywords.filter((k) => k.last_position === null).slice(0, 10);
+        if (nullKeywords.length === 0) return;
+        await fetch("/api/dashboard/rank-tracker", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ domain, keywords: nullKeywords.map((k) => k.keyword) }),
+        });
+      }
       await fetchData(domain);
     } finally {
       setChecking(false);
@@ -221,12 +229,21 @@ export function RankTrackerDashboard({ defaultDomain }: { defaultDomain: string 
             {fetchingVolume ? "Fetching…" : "Fetch Volume"}
           </button>
           <button
-            onClick={checkPositions}
+            onClick={() => checkPositions(false)}
             disabled={checking || loading}
-            className="flex items-center gap-2 px-4 py-2 bg-pink-500 hover:bg-pink-600 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-[#FF1493] hover:bg-pink-600 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors"
           >
             <RefreshCw className={`h-4 w-4 ${checking ? "animate-spin" : ""}`} />
-            {checking ? "Checking…" : "Check Positions"}
+            {checking ? "Checking…" : "Check 10"}
+          </button>
+          <button
+            onClick={() => checkPositions(true)}
+            disabled={checking || loading}
+            title={`Check all ${keywords.filter(k => k.last_position === null).length} unchecked keywords`}
+            className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors"
+          >
+            <RefreshCw className={`h-4 w-4 ${checking ? "animate-spin" : ""}`} />
+            {checking ? "Checking all…" : `Check All (${keywords.filter(k => k.last_position === null).length})`}
           </button>
         </div>
       </div>

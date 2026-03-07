@@ -52,70 +52,87 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { domain, keywords } = body as { domain: string; keywords: string[] };
+    const { domain, keywords, checkAll } = body as { domain: string; keywords?: string[]; checkAll?: boolean };
 
-    if (!domain || !keywords || keywords.length === 0) {
-      return NextResponse.json({ error: "Missing domain or keywords" }, { status: 400 });
+    if (!domain) {
+      return NextResponse.json({ error: "Missing domain" }, { status: 400 });
     }
 
-    const batch = keywords.slice(0, 10);
+    let batch: string[];
 
-    // Build DataForSEO request — all keywords in one array
-    const requestBody = batch.map((kw) => ({
-      keyword: kw,
-      location_code: 2840,
-      language_code: "en",
-      device: "desktop",
-      depth: 100,
-    }));
-
-    const dfsResponse = await fetch(
-      "https://api.dataforseo.com/v3/serp/google/organic/live/regular",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Basic ${DATAFORSEO_AUTH}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(requestBody),
+    if (checkAll) {
+      // Fetch all unchecked keywords for this domain from DB
+      const unchecked = await db.execute(
+        sql`SELECT keyword FROM tracked_keywords WHERE domain = ${domain} AND last_checked_at IS NULL ORDER BY created_at DESC`
+      ) as any[];
+      batch = unchecked.map((r: any) => r.keyword);
+    } else {
+      if (!keywords || keywords.length === 0) {
+        return NextResponse.json({ error: "Missing keywords" }, { status: 400 });
       }
-    );
-
-    if (!dfsResponse.ok) {
-      throw new Error(`DataForSEO error: ${dfsResponse.status}`);
+      batch = keywords.slice(0, 10);
     }
-
-    const dfsData = await dfsResponse.json();
-    const tasks = dfsData.tasks || [];
 
     const results: { keyword: string; position: number | null }[] = [];
     const now = new Date().toISOString();
+    const CHUNK = 10;
 
-    for (let i = 0; i < tasks.length; i++) {
-      const task = tasks[i];
-      const keyword = batch[i];
-      const items = task?.result?.[0]?.items || [];
+    // Process in chunks of 10 (DataForSEO SERP live endpoint limit)
+    for (let offset = 0; offset < batch.length; offset += CHUNK) {
+      const chunk = batch.slice(offset, offset + CHUNK);
 
-      // Find domain match
-      const match = items.find(
-        (item: any) =>
-          item.type === "organic" &&
-          item.domain &&
-          item.domain.includes(domain.replace(/^www\./, ""))
+      const requestBody = chunk.map((kw) => ({
+        keyword: kw,
+        location_code: 2840,
+        language_code: "en",
+        device: "desktop",
+        depth: 100,
+      }));
+
+      const dfsResponse = await fetch(
+        "https://api.dataforseo.com/v3/serp/google/organic/live/regular",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Basic ${DATAFORSEO_AUTH}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(requestBody),
+          signal: AbortSignal.timeout(30000),
+        }
       );
 
-      const position: number | null = match ? match.rank_absolute : null;
-      results.push({ keyword, position });
+      if (!dfsResponse.ok) {
+        console.error(`DataForSEO error on chunk ${offset}: ${dfsResponse.status}`);
+        continue;
+      }
 
-      // Update tracked_keywords
-      await db.execute(
-        sql`UPDATE tracked_keywords SET last_position = ${position}, last_checked_at = ${now} WHERE keyword = ${keyword} AND domain = ${domain}`
-      );
+      const dfsData = await dfsResponse.json();
+      const tasks = dfsData.tasks || [];
 
-      // Insert into serp_history
-      await db.execute(
-        sql`INSERT INTO serp_history (keyword, domain, position, url, recorded_at) VALUES (${keyword}, ${domain}, ${position}, ${match?.url || null}, ${now})`
-      );
+      for (let i = 0; i < tasks.length; i++) {
+        const task = tasks[i];
+        const keyword = chunk[i];
+        const items = task?.result?.[0]?.items || [];
+
+        const match = items.find(
+          (item: any) =>
+            item.type === "organic" &&
+            item.domain &&
+            item.domain.includes(domain.replace(/^www\./, ""))
+        );
+
+        const position: number | null = match ? match.rank_absolute : null;
+        results.push({ keyword, position });
+
+        await db.execute(
+          sql`UPDATE tracked_keywords SET last_position = ${position}, last_checked_at = ${now} WHERE keyword = ${keyword} AND domain = ${domain}`
+        );
+
+        await db.execute(
+          sql`INSERT INTO serp_history (keyword, domain, position, url, recorded_at) VALUES (${keyword}, ${domain}, ${position}, ${match?.url || null}, ${now})`
+        );
+      }
     }
 
     return NextResponse.json({ updated: results.length, results });
