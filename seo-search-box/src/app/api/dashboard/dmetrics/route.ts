@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     const traffic = trafficRows[0] || null;
 
     const relatedRows = await db.execute(
-      sql`SELECT rk.related_keyword, rk.search_volume, rk.keyword_difficulty, rk.competition FROM related_keywords rk JOIN tracked_keywords tk ON rk.seed_keyword = tk.keyword WHERE tk.domain = ${domain} ORDER BY rk.search_volume DESC NULLS LAST LIMIT 100`
+      sql`SELECT rk.related_keyword, rk.search_volume, rk.keyword_difficulty, rk.competition FROM dfs_related_keywords rk JOIN tracked_keywords tk ON rk.seed_keyword = tk.keyword WHERE tk.domain = ${domain} ORDER BY rk.search_volume DESC NULLS LAST LIMIT 100`
     ) as any[];
 
     return NextResponse.json({ competitors, traffic, relatedKeywords: relatedRows });
@@ -134,7 +134,7 @@ export async function POST(request: NextRequest) {
             const comp = item.keyword_data?.keyword_info?.competition ?? null;
             if (!kw) continue;
             await db.execute(
-              sql`INSERT INTO related_keywords (seed_keyword, related_keyword, search_volume, keyword_difficulty, competition) VALUES (${seedKw}, ${kw}, ${vol}, ${kd}, ${comp}) ON CONFLICT (seed_keyword, related_keyword) DO UPDATE SET search_volume = EXCLUDED.search_volume, keyword_difficulty = EXCLUDED.keyword_difficulty, competition = EXCLUDED.competition`
+              sql`INSERT INTO dfs_related_keywords (seed_keyword, related_keyword, search_volume, keyword_difficulty, competition) VALUES (${seedKw}, ${kw}, ${vol}, ${kd}, ${comp}) ON CONFLICT (seed_keyword, related_keyword, location) DO UPDATE SET search_volume = EXCLUDED.search_volume, keyword_difficulty = EXCLUDED.keyword_difficulty, competition = EXCLUDED.competition`
             );
           }
         }
