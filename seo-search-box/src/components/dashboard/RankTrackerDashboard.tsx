@@ -158,7 +158,7 @@ export function RankTrackerDashboard({ defaultDomain }: { defaultDomain: string 
   async function fetchMetrics(d: string) {
     setLoadingMetrics(true);
     try {
-      const res = await fetch(`/api/dashboard/domain-metrics?domain=${encodeURIComponent(d)}`);
+      const res = await fetch(`/api/dashboard/dmetrics?domain=${encodeURIComponent(d)}`);
       const data: DomainMetrics = await res.json();
       setMetrics(data);
     } finally {
@@ -174,7 +174,7 @@ export function RankTrackerDashboard({ defaultDomain }: { defaultDomain: string 
   async function refreshMetrics() {
     setFetchingMetrics(true);
     try {
-      await fetch("/api/dashboard/domain-metrics", {
+      await fetch("/api/dashboard/dmetrics", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ domain }),
@@ -226,7 +226,7 @@ export function RankTrackerDashboard({ defaultDomain }: { defaultDomain: string 
   async function fetchDifficulty() {
     setFetchingKD(true);
     try {
-      await fetch("/api/dashboard/rank-tracker/difficulty", {
+      await fetch("/api/dashboard/rank-tracker/kd", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ domain }),
