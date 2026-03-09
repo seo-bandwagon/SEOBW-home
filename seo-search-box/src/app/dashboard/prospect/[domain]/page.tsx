@@ -94,6 +94,30 @@ const SOCIAL_BLACKLIST = new Set([
   "tiktok.com", "pinterest.com", "yelp.com",
 ]);
 
+// Extract core brand name from domain
+function extractBrandName(domain: string): string {
+  const stripped = domain.replace(/\.(com|net|org|io|co|us|biz|info)$/, "").toLowerCase();
+  const suffixes = [
+    "products", "product", "services", "service", "company", "companies",
+    "corp", "corporation", "inc", "incorporated", "llc", "limited",
+    "solutions", "solution", "group", "enterprises", "enterprise",
+    "manufacturing", "innovations", "innovation", "technologies", "tech",
+    "safety", "systems", "system", "global", "international", "usa", "us",
+  ];
+  let core = stripped;
+  for (const suffix of suffixes) {
+    core = core.replace(new RegExp(`${suffix}$`), "");
+  }
+  return core.replace(/[-_]/g, "");
+}
+
+// Check if competitor domain is a brand variant of the target
+function isBrandVariant(targetDomain: string, competitorDomain: string): boolean {
+  const targetBrand = extractBrandName(targetDomain);
+  const competitorBrand = extractBrandName(competitorDomain);
+  return targetBrand.length > 3 && competitorBrand.includes(targetBrand);
+}
+
 function getKeywordName(kw: RankedKeyword | KeywordIdea): string {
   return (
     (kw as RankedKeyword).keyword ||
@@ -311,13 +335,25 @@ export default async function ProspectReportPage({
       return name.includes(domainBase) || name.split(" ").every((w) => domainBase.includes(w));
     });
 
-  // Filter competitors
-  const cleanCompetitors = allCompetitors
-    .filter((c) => {
-      const d = (c.domain || c.full_domain || "").toLowerCase();
-      return d && !SOCIAL_BLACKLIST.has(d);
-    })
-    .slice(0, 5);
+  // Filter and categorize competitors
+  const nonSocialCompetitors = allCompetitors.filter((c) => {
+    const d = (c.domain || c.full_domain || "").toLowerCase();
+    return d && !SOCIAL_BLACKLIST.has(d);
+  });
+  
+  const brandVariants: Competitor[] = [];
+  const realCompetitors: Competitor[] = [];
+  
+  for (const comp of nonSocialCompetitors) {
+    const compDomain = (comp.domain || comp.full_domain || "").toLowerCase();
+    if (isBrandVariant(domain, compDomain)) {
+      brandVariants.push(comp);
+    } else {
+      realCompetitors.push(comp);
+    }
+  }
+  
+  const cleanCompetitors = realCompetitors.slice(0, 5);
 
   // Pagespeed avg
   const scores = [ps.performance, ps.seo, ps.best_practices, ps.accessibility]
@@ -491,7 +527,58 @@ export default async function ProspectReportPage({
         </div>
       )}
 
-      {/* ── D. How You Compare ─────────────────────────────────────────── */}
+      {/* ── D. Brand Variants (if detected) ────────────────────────────── */}
+      {brandVariants.length > 0 && (
+        <div className="bg-[#000022] border border-amber-400/20 rounded-2xl p-8">
+          <div className="flex items-center gap-3 mb-2">
+            <AlertCircle className="h-5 w-5 text-amber-400" />
+            <h2 className="font-heading text-3xl text-[#F5F5F5]">Brand Fragmentation Detected</h2>
+          </div>
+          <p className="text-[#F5F5F5]/70 text-sm mb-4">
+            We found {brandVariants.length} domain{brandVariants.length !== 1 ? "s" : ""} that appear to be part of your brand family. 
+            Each one is competing with the others instead of building combined authority.
+          </p>
+          <div className="bg-amber-400/10 border border-amber-400/30 rounded-xl p-4 mb-5">
+            <p className="text-amber-300 text-sm">
+              <span className="font-semibold">The opportunity:</span> Consolidating these domains into one primary site would 
+              concentrate your link authority, simplify your SEO strategy, and likely double or triple your organic visibility 
+              for product-related searches.
+            </p>
+          </div>
+          <div className="space-y-2">
+            {brandVariants.slice(0, 10).map((variant, i) => {
+              const variantDomain = variant.domain || variant.full_domain || "unknown";
+              const shared = variant.intersections || 0;
+              const avgPos = variant.avg_position
+                ? Math.round(variant.avg_position)
+                : variant.sum_position && shared > 0
+                ? Math.round(variant.sum_position / shared)
+                : null;
+
+              return (
+                <div key={i} className="flex items-center justify-between bg-amber-400/5 border border-amber-400/10 rounded-xl px-4 py-3">
+                  <div className="flex items-center gap-3">
+                    <span className="text-amber-400/50 text-xs font-mono">#{i + 1}</span>
+                    <div>
+                      <p className="text-[#F5F5F5] text-sm font-medium">{variantDomain}</p>
+                      {shared > 0 && (
+                        <p className="text-[#F5F5F5]/40 text-xs">{shared} overlapping keyword{shared !== 1 ? "s" : ""}</p>
+                      )}
+                    </div>
+                  </div>
+                  {avgPos !== null && (
+                    <span className="text-xs font-semibold text-amber-400">
+                      Avg #{avgPos}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ── E. How You Compare ─────────────────────────────────────────── */}
       {cleanCompetitors.length > 0 && (
         <div className="bg-[#000022] border border-pink/20 rounded-2xl p-8">
           <div className="flex items-center gap-3 mb-2">
@@ -535,7 +622,7 @@ export default async function ProspectReportPage({
         </div>
       )}
 
-      {/* ── E. Technical Health ─────────────────────────────────────────── */}
+      {/* ── F. Technical Health ─────────────────────────────────────────── */}
       {scores.length > 0 && (
         <div className="bg-[#000022] border border-pink/20 rounded-2xl p-8">
           <div className="flex items-center gap-3 mb-2">
@@ -619,7 +706,7 @@ export default async function ProspectReportPage({
         </div>
       )}
 
-      {/* ── F. The Opportunity (CTA) ─────────────────────────────────────── */}
+      {/* ── G. The Opportunity (CTA) ─────────────────────────────────────── */}
       <div className="relative overflow-hidden rounded-2xl border border-pink/30 bg-gradient-to-br from-pink/20 via-[#000022] to-[#000022] p-10 text-center">
         {/* Glow */}
         <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-64 h-64 bg-pink/20 rounded-full blur-3xl pointer-events-none" />
