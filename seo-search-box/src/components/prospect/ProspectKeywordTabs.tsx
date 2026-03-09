@@ -8,6 +8,7 @@ export interface KeywordRow {
   position: number | null;
   volume: number;
   cpc: number | null;
+  isForcedBrand?: boolean; // manually injected brand keyword (e.g. person's name)
 }
 
 // CTR range by Google organic position
@@ -136,7 +137,9 @@ export function ProspectKeywordTabs({ discoveryKeywords, brandedKeywords, isBran
                       )}
                     </td>
                     <td className="py-3 px-3 text-right text-[#F5F5F5]/60">
-                      {kw.volume > 0 ? kw.volume.toLocaleString() : "—"}
+                      {kw.isForcedBrand && kw.volume === 0
+                        ? <span className="text-[#F5F5F5]/30 text-xs italic">&lt;10/mo</span>
+                        : kw.volume > 0 ? kw.volume.toLocaleString() : "—"}
                     </td>
                     {tab === "discovery" && (
                       <>

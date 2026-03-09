@@ -332,37 +332,73 @@ export default async function ProspectReportPage({
   // Build keyword rows from DB data
   const domainBase = domain.replace(/\.(com|net|org|io|co|us)$/, "").replace(/-/g, "").toLowerCase();
 
+  // Strip generic business suffixes to get core brand name (e.g. "redfoxsafetyproducts" → "redfox")
+  function getBrandCore(base: string): string {
+    const suffixes = [
+      "safetyproducts","products","product","safetyservices","services","service",
+      "safety","company","corp","manufacturing","innovations","innovation",
+      "technologies","tech","enterprises","enterprise","systems","solutions",
+      "global","international","usa","inc","llc",
+    ];
+    let core = base;
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (const s of suffixes) {
+        if (core.endsWith(s) && core.length > s.length + 3) {
+          core = core.slice(0, -s.length);
+          changed = true;
+        }
+      }
+    }
+    return core.length > 3 ? core : base;
+  }
+
+  const brandCore = getBrandCore(domainBase);
+
+  // Classify branded vs discovery
+  function isBrandedKw(kwName: string, isForcedBrand: boolean): boolean {
+    if (isForcedBrand) return true;
+    const words = kwName.toLowerCase().split(/\s+/);
+    // Check 1: any 5+ char word from keyword is substring of domain base
+    if (words.some((w) => w.length >= 5 && domainBase.includes(w))) return true;
+    // Check 2: keyword with spaces removed contains the brand core (catches "red fox" → "redfox")
+    const kwNorm = kwName.toLowerCase().replace(/\s+/g, "");
+    if (brandCore.length > 3 && kwNorm.includes(brandCore)) return true;
+    return false;
+  }
+
   const allKeywordRows: KeywordRow[] = ranked
     .map((kw) => {
       const name = getKeywordName(kw);
       const pos  = getPosition(kw);
-      // Directly access the correct nested path
-      const vol: number = (kw as any).keyword_data?.keyword_info?.search_volume
+      const volRaw = (kw as any).keyword_data?.keyword_info?.search_volume
         ?? (kw as any).keyword_data?.search_volume
-        ?? (kw as any).search_volume
-        ?? 0;
+        ?? (kw as any).search_volume;
+      const vol: number = typeof volRaw === "number" ? volRaw : 0;
       const rawCpc = (kw as any).keyword_data?.keyword_info?.cpc
         ?? (kw as any).cpc;
+      const isForcedBrand: boolean = !!(kw as any)._brand_keyword;
       return {
         name,
         position: pos < 999 ? pos : null,
-        volume: typeof vol === "number" ? vol : 0,
+        volume: vol,
         cpc: typeof rawCpc === "number" ? rawCpc : null,
+        isForcedBrand,
       };
     })
     .filter((k) => k.name)
     .sort((a, b) => (a.position ?? 999) - (b.position ?? 999));
 
-  // Classify branded vs discovery — branded = any 5+ char word from keyword appears in domain name
-  function isBrandedKw(name: string): boolean {
-    return name.toLowerCase().split(/\s+/).some(
-      (w) => w.length >= 5 && domainBase.includes(w)
-    );
-  }
+  const discoveryKeywords: KeywordRow[] = allKeywordRows
+    .filter((k) => k.volume > 0 && !isBrandedKw(k.name, k.isForcedBrand ?? false))
+    .map(({ isForcedBrand: _, ...rest }) => rest);
 
-  const discoveryKeywords = allKeywordRows.filter((k) => k.volume > 0 && !isBrandedKw(k.name));
-  const brandedKeywords   = allKeywordRows.filter((k) => isBrandedKw(k.name));
-  const keywordRows = allKeywordRows; // keep for length check
+  const brandedKeywords: KeywordRow[] = allKeywordRows
+    .filter((k) => isBrandedKw(k.name, k.isForcedBrand ?? false))
+    .map((k) => ({ ...k, isForcedBrand: k.isForcedBrand }));
+
+  const keywordRows = allKeywordRows;
   const isBrandedOnly = ranked.length > 0 && discoveryKeywords.length === 0;
 
   // Filter and categorize competitors
