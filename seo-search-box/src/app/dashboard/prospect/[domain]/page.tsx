@@ -1,6 +1,7 @@
 import { db } from "@/lib/db/client";
 import { sql } from "drizzle-orm";
 import { notFound } from "next/navigation";
+import { ProspectKeywordTabs, type KeywordRow } from "@/components/prospect/ProspectKeywordTabs";
 import {
   Globe,
   Zap,
@@ -328,14 +329,37 @@ export default async function ProspectReportPage({
     .sort((a, b) => a._pos - b._pos)
     .slice(0, 10);
 
-  // Branded-only detection: all ranked keywords contain the domain name (stripped)
-  const domainBase = domain.replace(/\.(com|net|org|io|co)$/, "").replace(/-/g, " ").toLowerCase();
-  const isBrandedOnly =
-    ranked.length > 0 &&
-    ranked.every((kw) => {
-      const name = getKeywordName(kw).toLowerCase();
-      return name.includes(domainBase) || name.split(" ").every((w) => domainBase.includes(w));
-    });
+  // Brand name extraction for keyword classification
+  const domainBase = domain.replace(/\.(com|net|org|io|co|us)$/, "").replace(/-/g, "").toLowerCase();
+
+  // A keyword is "branded" if any word (5+ chars) in it appears as a substring of domainBase
+  function isKeywordBranded(kwName: string): boolean {
+    const words = kwName.toLowerCase().split(/\s+/);
+    return words.some((w) => w.length >= 5 && domainBase.includes(w));
+  }
+
+  // Build keyword rows for the tabbed component
+  const keywordRows: KeywordRow[] = ranked
+    .map((kw) => {
+      const name = getKeywordName(kw);
+      const pos  = getPosition(kw);
+      const vol  = getVolume(kw);
+      const rawCpc = (kw as any).keyword_data?.keyword_info?.cpc
+        ?? (kw as any).cpc ?? null;
+      return {
+        name,
+        position: pos < 999 ? pos : null,
+        volume: vol,
+        cpc: typeof rawCpc === "number" ? rawCpc : null,
+        isBranded: isKeywordBranded(name),
+      };
+    })
+    .filter((k) => k.name)
+    .sort((a, b) => (a.position ?? 999) - (b.position ?? 999));
+
+  // Branded-only detection: no discovery keywords with volume
+  const hasDiscovery = keywordRows.some((k) => !k.isBranded && k.volume > 0);
+  const isBrandedOnly = ranked.length > 0 && !hasDiscovery;
 
   // Filter and categorize competitors
   const nonSocialCompetitors = allCompetitors.filter((c) => {
@@ -348,6 +372,7 @@ export default async function ProspectReportPage({
   
   for (const comp of nonSocialCompetitors) {
     const compDomain = (comp.domain || comp.full_domain || "").toLowerCase();
+    if (compDomain === domain.toLowerCase()) continue; // skip self
     if (isBrandVariant(domain, compDomain)) {
       brandVariants.push(comp);
     } else {
@@ -362,8 +387,11 @@ export default async function ProspectReportPage({
     .filter((s): s is number => typeof s === "number");
   const avgScore = scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : null;
 
+  // Filter ideas to only those with actual search volume
+  const filteredIdeas = ideas.filter((idea) => getVolume(idea) > 0);
+
   // Max volume for bar
-  const maxVol = Math.max(...ideas.map(getVolume), 1);
+  const maxVol = Math.max(...filteredIdeas.map(getVolume), 1);
 
   const isLawFirm = p.prospect_type === "law_firm";
   const isNonprofit = p.prospect_type === "nonprofit" || !!(ps as any).nonprofit_501c3;
@@ -436,51 +464,19 @@ export default async function ProspectReportPage({
             : "No ranking data captured yet."}
         </p>
 
-        {isBrandedOnly && (
-          <div className="flex items-start gap-3 bg-orange-400/10 border border-orange-400/30 rounded-xl p-4 mb-5">
-            <AlertCircle className="h-4 w-4 text-orange-400 mt-0.5 shrink-0" />
-            <p className="text-orange-300 text-sm">
-              <span className="font-semibold">You rank for your name, but not for what you sell.</span>{" "}
-              All of your current rankings are for branded search terms. When someone searches for your
-              product or service without knowing you exist, you&apos;re invisible.
-            </p>
-          </div>
-        )}
-
-        {top10Ranked.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-pink/10">
-                  <th className="text-left py-2 pr-4 text-[#F5F5F5]/40 font-medium text-xs uppercase tracking-wider">Keyword</th>
-                  <th className="text-center py-2 px-4 text-[#F5F5F5]/40 font-medium text-xs uppercase tracking-wider">Position</th>
-                  <th className="text-right py-2 pl-4 text-[#F5F5F5]/40 font-medium text-xs uppercase tracking-wider">Monthly Searches</th>
-                </tr>
-              </thead>
-              <tbody>
-                {top10Ranked.map((kw, i) => (
-                  <tr key={i} className="border-b border-pink/5 hover:bg-[#F5F5F5]/2 transition-colors">
-                    <td className="py-3 pr-4 text-[#F5F5F5]">{kw._name}</td>
-                    <td className="py-3 px-4 text-center">
-                      <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold ${positionBg(kw._pos)}`}>
-                        #{kw._pos}
-                      </span>
-                    </td>
-                    <td className="py-3 pl-4 text-right text-[#F5F5F5]/60">
-                      {kw._vol > 0 ? kw._vol.toLocaleString() : "—"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+        {keywordRows.length > 0 ? (
+          <ProspectKeywordTabs
+            keywords={keywordRows}
+            isBrandedOnly={isBrandedOnly}
+            domain={domain}
+          />
         ) : (
           <p className="text-[#F5F5F5]/30 text-sm italic">No ranking data available.</p>
         )}
       </div>
 
       {/* ── C. Untapped Opportunities ──────────────────────────────────── */}
-      {ideas.length > 0 && (
+      {filteredIdeas.length > 0 && (
         <div className="bg-[#000022] border border-pink/20 rounded-2xl p-8">
           <div className="flex items-center gap-3 mb-2">
             <TrendingUp className="h-5 w-5 text-pink" />
@@ -491,7 +487,7 @@ export default async function ProspectReportPage({
           </p>
 
           <div className="grid gap-4">
-            {ideas.map((idea, i) => {
+            {filteredIdeas.map((idea, i) => {
               const name = getKeywordName(idea);
               const vol = getVolume(idea);
               const cpc = getIdeaCpc(idea);
@@ -759,7 +755,7 @@ export default async function ProspectReportPage({
           <p className="text-[#F5F5F5]/70 text-base max-w-xl mx-auto mb-2">
             {isLawFirm
               ? `The keywords your competitors rank for represent tens of thousands in monthly ad spend — traffic you could own organically. A focused 90-day SEO strategy could fundamentally change how clients find you.`
-              : ideas.length > 0
+              : filteredIdeas.length > 0
               ? `The opportunity we've identified here is just the surface. A full keyword landscape analysis, content strategy, and technical roadmap would reveal exactly how to outrank your competitors and capture search traffic you're currently leaving on the table.`
               : `Your current organic footprint only scratches the surface of what's possible. A focused SEO strategy built around your actual customers' search behavior could dramatically change your visibility.`
             }
