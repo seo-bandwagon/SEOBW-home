@@ -1,96 +1,53 @@
 import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db/client";
+import { sql } from "drizzle-orm";
 
-const SUPABASE_URL = process.env.SUPABASE_URL || "https://rraubczrlpaushskzpfc.supabase.co";
-const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || "";
-
-async function supabaseRequest(path: string, options: RequestInit = {}) {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
-    ...options,
-    headers: {
-      "apikey": SUPABASE_KEY,
-      "Authorization": `Bearer ${SUPABASE_KEY}`,
-      "Content-Type": "application/json",
-      "Prefer": "return=representation",
-      ...options.headers,
-    },
-  });
-  
-  if (!res.ok) {
-    const error = await res.text();
-    throw new Error(error);
-  }
-  
-  const text = await res.text();
-  return text ? JSON.parse(text) : null;
-}
-
-// GET /api/clients/[id] - Get single client
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+// GET /api/clients/[id]
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  
   try {
-    const clients = await supabaseRequest(`clients?id=eq.${id}&select=*`);
-    
-    if (!clients || clients.length === 0) {
-      return NextResponse.json({ error: "Client not found" }, { status: 404 });
-    }
-    
-    return NextResponse.json({ client: clients[0] });
+    const result = await db.execute(sql`SELECT * FROM clients WHERE id = ${id} LIMIT 1`);
+    if (!result.length) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    return NextResponse.json({ client: result[0] });
   } catch (error) {
-    console.error("Error fetching client:", error);
     return NextResponse.json({ error: "Failed to fetch client" }, { status: 500 });
   }
 }
 
-// PUT /api/clients/[id] - Update client
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+// PATCH /api/clients/[id]
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  
   try {
     const body = await request.json();
     const { name, contact_email, gsc_site_url, ga4_property_id, notes, status } = body;
-    
-    const client = await supabaseRequest(`clients?id=eq.${id}`, {
-      method: "PATCH",
-      body: JSON.stringify({
-        name,
-        contact_email,
-        gsc_site_url,
-        ga4_property_id,
-        notes,
-        status,
-        updated_at: new Date().toISOString(),
-      }),
-    });
-    
-    return NextResponse.json({ client: client[0] });
+
+    const result = await db.execute(sql`
+      UPDATE clients SET
+        name = COALESCE(${name}, name),
+        contact_email = COALESCE(${contact_email}, contact_email),
+        gsc_site_url = COALESCE(${gsc_site_url}, gsc_site_url),
+        ga4_property_id = COALESCE(${ga4_property_id}, ga4_property_id),
+        notes = COALESCE(${notes}, notes),
+        status = COALESCE(${status}, status),
+        updated_at = NOW()
+      WHERE id = ${id}
+      RETURNING *
+    `);
+
+    if (!result.length) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    return NextResponse.json({ client: result[0] });
   } catch (error) {
-    console.error("Error updating client:", error);
     return NextResponse.json({ error: "Failed to update client" }, { status: 500 });
   }
 }
 
-// DELETE /api/clients/[id] - Delete client
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+// DELETE /api/clients/[id]
+export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  
   try {
-    await supabaseRequest(`clients?id=eq.${id}`, {
-      method: "DELETE",
-    });
-    
+    await db.execute(sql`DELETE FROM clients WHERE id = ${id}`);
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error deleting client:", error);
     return NextResponse.json({ error: "Failed to delete client" }, { status: 500 });
   }
 }

@@ -1,32 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db/client";
+import { sql } from "drizzle-orm";
 
-const SUPABASE_URL = process.env.SUPABASE_URL || "https://rraubczrlpaushskzpfc.supabase.co";
-const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || "";
-
-async function supabaseRequest(path: string, options: RequestInit = {}) {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
-    ...options,
-    headers: {
-      "apikey": SUPABASE_KEY,
-      "Authorization": `Bearer ${SUPABASE_KEY}`,
-      "Content-Type": "application/json",
-      "Prefer": "return=representation",
-      ...options.headers,
-    },
-  });
-  
-  if (!res.ok) {
-    const error = await res.text();
-    throw new Error(error);
-  }
-  
-  return res.json();
-}
-
-// GET /api/clients - List all clients
+// GET /api/clients
 export async function GET() {
   try {
-    const clients = await supabaseRequest("clients?select=*&order=name.asc");
+    const clients = await db.execute(sql`SELECT * FROM clients ORDER BY name ASC`);
     return NextResponse.json({ clients });
   } catch (error) {
     console.error("Error fetching clients:", error);
@@ -34,28 +13,23 @@ export async function GET() {
   }
 }
 
-// POST /api/clients - Create a new client
+// POST /api/clients
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, contact_email, gsc_site_url, ga4_property_id, notes } = body;
-    
+    const { name, contact_email, gsc_site_url, ga4_property_id, notes, status } = body;
+
     if (!name) {
       return NextResponse.json({ error: "Name is required" }, { status: 400 });
     }
-    
-    const client = await supabaseRequest("clients", {
-      method: "POST",
-      body: JSON.stringify({
-        name,
-        contact_email,
-        gsc_site_url,
-        ga4_property_id,
-        notes,
-      }),
-    });
-    
-    return NextResponse.json({ client: client[0] }, { status: 201 });
+
+    const result = await db.execute(sql`
+      INSERT INTO clients (name, contact_email, gsc_site_url, ga4_property_id, notes, status)
+      VALUES (${name}, ${contact_email || null}, ${gsc_site_url || null}, ${ga4_property_id || null}, ${notes || null}, ${status || 'active'})
+      RETURNING *
+    `);
+
+    return NextResponse.json({ client: result[0] }, { status: 201 });
   } catch (error) {
     console.error("Error creating client:", error);
     return NextResponse.json({ error: "Failed to create client" }, { status: 500 });
