@@ -70,10 +70,22 @@ export function summariseSchema(blocks: SchemaBlock[]): {
   hasProduct: boolean;
   hasReview: boolean;
   hasArticle: boolean;
+  isNonprofit501c3: boolean;
 } {
   const rawTypes: string[] = blocks.map(b => schemaTypeLabel(b["@type"] as string | string[])).filter((x): x is string => x.length > 0);
   const types: string[] = Array.from(new Set(rawTypes));
   const has = (t: string) => types.some(x => x.toLowerCase().includes(t.toLowerCase()));
+
+  // Detect 501(c)(3) via nonprofitStatus field or NGO/Nonprofit type
+  const isNonprofit501c3 = blocks.some(b => {
+    const status = b["nonprofitStatus"];
+    if (typeof status === "string" && status.toLowerCase().includes("501c3")) return true;
+    if (Array.isArray(status) && status.some((s: unknown) => typeof s === "string" && s.toLowerCase().includes("501c3"))) return true;
+    const t = b["@type"];
+    const typeStr = (Array.isArray(t) ? t.join(" ") : String(t ?? "")).toLowerCase();
+    return typeStr.includes("ngo") || typeStr.includes("nonprofit");
+  });
+
   return {
     types,
     count: blocks.length,
@@ -86,5 +98,6 @@ export function summariseSchema(blocks: SchemaBlock[]): {
     hasProduct: has("Product"),
     hasReview: has("Review") || has("AggregateRating"),
     hasArticle: has("Article") || has("BlogPosting") || has("NewsArticle"),
+    isNonprofit501c3,
   };
 }

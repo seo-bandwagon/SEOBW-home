@@ -468,7 +468,9 @@ export default async function ProspectReportPage({
   const avgScore = scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : null;
 
   const isLawFirm = p.prospect_type === "law_firm";
-  const isNonprofit = p.prospect_type === "nonprofit" || !!(ps as any).nonprofit_501c3;
+  const schemaBlocks = (p.schema_data ?? []) as Array<{ "@type"?: string | string[]; [key: string]: unknown }>;
+  const schemaSummary = summariseSchema(schemaBlocks);
+  const isNonprofit = p.prospect_type === "nonprofit" || !!(ps as any).nonprofit_501c3 || schemaSummary.isNonprofit501c3;
 
   // Social links from pagespeed data
   const socialLinks: Record<string, string> = (ps as any).social_links ?? {};
@@ -661,23 +663,6 @@ export default async function ProspectReportPage({
         <p className="text-[#F5F5F5]/50 text-sm mb-6">
           Keywords you could be ranking for — and the traffic they represent.
         </p>
-
-        {/* Google Ad Grants callout */}
-        <div className="flex items-start gap-3 bg-[#F5F5F5]/3 border border-pink/10 rounded-xl p-4 mb-6">
-          <span className="text-lg shrink-0">🎁</span>
-          <div>
-            <p className="text-[#F5F5F5]/80 text-sm font-semibold mb-0.5">Nonprofit? Google will pay for your ads.</p>
-            <p className="text-[#F5F5F5]/40 text-xs mb-2">Google Ad Grants gives eligible 501(c)(3) organizations up to $10,000/month in free Google Search advertising — every month, indefinitely.</p>
-            <a
-              href="https://www.google.com/grants/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-pink text-xs font-semibold hover:underline"
-            >
-              Apply for Google Ad Grants →
-            </a>
-          </div>
-        </div>
 
         {/* Branded-only warning */}
         {isBrandedOnly && opportunityKeywords.length === 0 && (
@@ -958,8 +943,8 @@ export default async function ProspectReportPage({
 
       {/* ── G2. Structured Data (Schema) ─────────────────────────────────── */}
       {(() => {
-        const blocks = p.schema_data ?? [];
-        const summary = summariseSchema(blocks);
+        const blocks = schemaBlocks;
+        const summary = schemaSummary;
         const IMPORTANT = [
           { key: "hasLocalBusiness", label: "LocalBusiness", desc: "Tells Google your business name, address, hours, and category. Critical for local SEO." },
           { key: "hasOrganization", label: "Organization", desc: "Establishes your brand identity and social profiles for Knowledge Panel eligibility." },
@@ -970,6 +955,7 @@ export default async function ProspectReportPage({
           { key: "hasProduct", label: "Product", desc: "Enables price, availability, and rating stars in product search results." },
           { key: "hasReview", label: "Review / AggregateRating", desc: "Displays star ratings in search results — typically 20-30% CTR lift." },
           { key: "hasArticle", label: "Article / BlogPosting", desc: "Enables article rich results and helps Google understand your content type." },
+          { key: "isNonprofit501c3", label: "Nonprofit501c3 (nonprofitStatus)", desc: "Identifies your organization as a 501(c)(3) — required for Google Ad Grants eligibility and nonprofit Knowledge Panel features." },
         ] as const;
 
         const present = IMPORTANT.filter(i => summary[i.key]);
@@ -1038,6 +1024,27 @@ export default async function ProspectReportPage({
                 </div>
               )}
             </div>
+
+            {/* Google Ad Grants — shown only when 501(c)(3) detected */}
+            {isNonprofit && (
+              <div className="mt-5 flex items-start gap-4 bg-blue-500/10 border border-blue-400/30 rounded-xl p-5">
+                <span className="text-2xl shrink-0">🎁</span>
+                <div>
+                  <p className="text-blue-300 text-sm font-bold mb-1">This organization qualifies for Google Ad Grants</p>
+                  <p className="text-[#F5F5F5]/50 text-sm mb-3">
+                    As a 501(c)(3) nonprofit, {domain} is eligible for up to <span className="text-blue-300 font-semibold">$10,000/month in free Google Search advertising</span> through the Google Ad Grants program — every month, indefinitely.
+                  </p>
+                  <a
+                    href="https://www.google.com/grants/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs font-bold px-4 py-2 rounded-lg transition-colors"
+                  >
+                    Apply for Google Ad Grants →
+                  </a>
+                </div>
+              </div>
+            )}
           </div>
         );
       })()}
