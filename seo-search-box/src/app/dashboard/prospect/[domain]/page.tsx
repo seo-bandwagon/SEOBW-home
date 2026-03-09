@@ -1,6 +1,7 @@
 import { db } from "@/lib/db/client";
 import { sql } from "drizzle-orm";
 import { notFound } from "next/navigation";
+import { summariseSchema } from "@/lib/schema-extractor";
 import {
   Globe,
   Zap,
@@ -13,6 +14,7 @@ import {
   Mail,
   ChevronRight,
   BarChart3,
+  Code2,
 } from "lucide-react";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -90,6 +92,7 @@ interface ProspectAnalysis {
   competitors?: Competitor[];
   keyword_ideas?: KeywordIdea[];
   pagespeed_data?: PagespeedData;
+  schema_data?: Array<{ "@type"?: string | string[]; [key: string]: unknown }>;
   notes?: string;
   analyzed_at?: string;
 }
@@ -952,6 +955,92 @@ export default async function ProspectReportPage({
           </div>
         </div>
       )}
+
+      {/* ── G2. Structured Data (Schema) ─────────────────────────────────── */}
+      {(() => {
+        const blocks = p.schema_data ?? [];
+        const summary = summariseSchema(blocks);
+        const IMPORTANT = [
+          { key: "hasLocalBusiness", label: "LocalBusiness", desc: "Tells Google your business name, address, hours, and category. Critical for local SEO." },
+          { key: "hasOrganization", label: "Organization", desc: "Establishes your brand identity and social profiles for Knowledge Panel eligibility." },
+          { key: "hasPerson", label: "Person", desc: "Links content to a named individual — important for author authority and E-E-A-T." },
+          { key: "hasWebSite", label: "WebSite", desc: "Enables Sitelinks Search Box and helps Google understand your site structure." },
+          { key: "hasFAQ", label: "FAQPage", desc: "Can generate rich results with expanded Q&A directly in search — high CTR impact." },
+          { key: "hasBreadcrumb", label: "BreadcrumbList", desc: "Shows your site hierarchy in search results, improving click-through rate." },
+          { key: "hasProduct", label: "Product", desc: "Enables price, availability, and rating stars in product search results." },
+          { key: "hasReview", label: "Review / AggregateRating", desc: "Displays star ratings in search results — typically 20-30% CTR lift." },
+          { key: "hasArticle", label: "Article / BlogPosting", desc: "Enables article rich results and helps Google understand your content type." },
+        ] as const;
+
+        const present = IMPORTANT.filter(i => summary[i.key]);
+        const missing = IMPORTANT.filter(i => !summary[i.key]);
+
+        return (
+          <div className="bg-[#000022] border border-pink/20 rounded-2xl p-8">
+            <div className="flex items-center gap-3 mb-2">
+              <Code2 className="h-5 w-5 text-pink" />
+              <h2 className="font-heading text-3xl text-[#F5F5F5]">Structured Data</h2>
+            </div>
+            <p className="text-[#F5F5F5]/50 text-sm mb-6">
+              Schema markup tells search engines exactly what your content means — enabling rich results, knowledge panels, and better ranking signals.
+            </p>
+
+            {blocks.length === 0 ? (
+              <div className="flex items-start gap-3 bg-red-500/10 border border-red-500/30 rounded-xl p-4 mb-6">
+                <AlertCircle className="h-4 w-4 text-red-400 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-red-300 text-sm font-semibold">No structured data found</p>
+                  <p className="text-[#F5F5F5]/40 text-xs mt-0.5">This site has no JSON-LD schema markup. Competitors with schema get rich results; this site gets plain blue links.</p>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-start gap-3 bg-green-500/10 border border-green-500/30 rounded-xl p-4 mb-6">
+                <CheckCircle className="h-4 w-4 text-green-400 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-green-300 text-sm font-semibold">{blocks.length} schema block{blocks.length !== 1 ? "s" : ""} found: {summary.types.join(", ")}</p>
+                  <p className="text-[#F5F5F5]/40 text-xs mt-0.5">Schema is implemented. Review what&apos;s present and what&apos;s missing below.</p>
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 gap-3">
+              {present.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold text-green-400/70 uppercase tracking-widest mb-2">✓ Present</p>
+                  <div className="grid gap-2">
+                    {present.map(item => (
+                      <div key={item.key} className="flex items-start gap-3 bg-green-500/5 border border-green-500/15 rounded-lg px-4 py-3">
+                        <CheckCircle className="h-3.5 w-3.5 text-green-400 mt-0.5 shrink-0" />
+                        <div>
+                          <span className="text-[#F5F5F5]/80 text-sm font-semibold">{item.label}</span>
+                          <p className="text-[#F5F5F5]/40 text-xs mt-0.5">{item.desc}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {missing.length > 0 && (
+                <div className="mt-2">
+                  <p className="text-xs font-semibold text-red-400/70 uppercase tracking-widest mb-2">✗ Missing</p>
+                  <div className="grid gap-2">
+                    {missing.map(item => (
+                      <div key={item.key} className="flex items-start gap-3 bg-[#F5F5F5]/2 border border-pink/8 rounded-lg px-4 py-3">
+                        <AlertCircle className="h-3.5 w-3.5 text-[#F5F5F5]/20 mt-0.5 shrink-0" />
+                        <div>
+                          <span className="text-[#F5F5F5]/50 text-sm font-semibold">{item.label}</span>
+                          <p className="text-[#F5F5F5]/30 text-xs mt-0.5">{item.desc}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ── H. The Opportunity (CTA) ─────────────────────────────────────── */}
       <div className="relative overflow-hidden rounded-2xl border border-pink/30 bg-gradient-to-br from-pink/20 via-[#000022] to-[#000022] p-10 text-center">
