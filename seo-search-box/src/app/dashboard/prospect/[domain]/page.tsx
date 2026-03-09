@@ -641,7 +641,9 @@ export default async function ProspectReportPage({
           </p>
 
           <a
-            href="tel:+18665354736"
+            href="https://calendar.app.google/JWAE1wfCYGGjGTin9"
+            target="_blank"
+            rel="noopener noreferrer"
             className="inline-flex items-center gap-2 bg-pink hover:bg-pink/90 text-white font-semibold px-8 py-4 rounded-xl transition-colors text-base mb-6"
           >
             <Phone className="h-4 w-4" />
