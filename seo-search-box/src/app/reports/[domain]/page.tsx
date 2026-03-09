@@ -496,7 +496,7 @@ export default async function ProspectReportPage({
       <div className="bg-[#000022] border border-pink/20 rounded-2xl p-8">
         <div className="flex items-center gap-3 mb-2">
           <BarChart3 className="h-5 w-5 text-pink" />
-          <h2 className="font-heading text-3xl text-[#F5F5F5]">Your Current Footprint</h2>
+          <h2 className="font-heading text-3xl text-[#F5F5F5]">Brand Footprint</h2>
         </div>
         <p className="text-[#F5F5F5]/50 text-sm mb-6">
           {ranked.length > 0
@@ -520,7 +520,7 @@ export default async function ProspectReportPage({
         <div className="bg-[#000022] border border-pink/20 rounded-2xl p-8">
           <div className="flex items-center gap-3 mb-2">
             <TrendingUp className="h-5 w-5 text-pink" />
-            <h2 className="font-heading text-3xl text-[#F5F5F5]">Untapped Opportunities</h2>
+            <h2 className="font-heading text-3xl text-[#F5F5F5]">Opportunities</h2>
           </div>
           <p className="text-[#F5F5F5]/50 text-sm mb-6">
             People are actively searching for these terms. Here&apos;s what you could capture.
@@ -545,12 +545,14 @@ export default async function ProspectReportPage({
                       {vol > 0 && <VolumeBar volume={vol} max={maxVol} />}
                     </div>
 
-                    {isLawFirm && cpc > 0 && (
-                      <div className="text-right shrink-0">
-                        <p className="text-pink text-sm font-semibold">${cpc.toFixed(2)}/click</p>
-                        <p className="text-[#F5F5F5]/40 text-xs">traffic you could own organically</p>
-                      </div>
-                    )}
+                    <div className="text-right shrink-0 flex flex-col items-end gap-1">
+                      {vol > 0 && (
+                        <p className="text-[#F5F5F5]/70 text-sm font-semibold">{vol.toLocaleString()}<span className="text-[#F5F5F5]/40 text-xs font-normal"> /mo</span></p>
+                      )}
+                      {cpc > 0 && (
+                        <p className="text-pink text-sm font-semibold">${cpc.toFixed(2)}<span className="text-[#F5F5F5]/40 text-xs font-normal"> /click</span></p>
+                      )}
+                    </div>
                   </div>
 
                   <p className="text-[#F5F5F5]/40 text-xs mt-3 flex items-center gap-1.5">
