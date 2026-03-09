@@ -194,6 +194,7 @@ function prospectTypeLabel(type?: string): string {
     artist_musician: "Artist / Musician",
     law_firm: "Law Firm",
     author: "Author",
+    nonprofit: "Nonprofit / 501(c)(3)",
     unknown: "Unknown",
   };
   return map[type || "unknown"] || type || "Unknown";
@@ -205,6 +206,7 @@ function prospectTypeBadgeColor(type?: string): string {
     artist_musician: "bg-purple-500/20 text-purple-300 border-purple-500/30",
     law_firm: "bg-amber-500/20 text-amber-300 border-amber-500/30",
     author: "bg-teal-500/20 text-teal-300 border-teal-500/30",
+    nonprofit: "bg-green-500/20 text-green-300 border-green-500/30",
     unknown: "bg-gray-500/20 text-gray-300 border-gray-500/30",
   };
   return map[type || "unknown"] || "bg-gray-500/20 text-gray-300 border-gray-500/30";
@@ -364,6 +366,7 @@ export default async function ProspectReportPage({
   const maxVol = Math.max(...ideas.map(getVolume), 1);
 
   const isLawFirm = p.prospect_type === "law_firm";
+  const isNonprofit = p.prospect_type === "nonprofit" || !!(ps as any).nonprofit_501c3;
 
   // ── Render ───────────────────────────────────────────────────────────────
 
@@ -706,7 +709,45 @@ export default async function ProspectReportPage({
         </div>
       )}
 
-      {/* ── G. The Opportunity (CTA) ─────────────────────────────────────── */}
+      {/* ── G. Google Grants (Nonprofits only) ──────────────────────────── */}
+      {isNonprofit && (
+        <div className="bg-[#000022] border border-green-500/30 rounded-2xl p-8">
+          <div className="flex items-center gap-3 mb-2">
+            <CheckCircle className="h-5 w-5 text-green-400" />
+            <h2 className="font-heading text-3xl text-[#F5F5F5]">You Qualify for Google Ad Grants</h2>
+          </div>
+          <p className="text-[#F5F5F5]/60 text-sm mb-5">
+            As a verified 501(c)(3) organization, {domain} is eligible for the Google Ad Grants program — 
+            one of the most underutilized resources available to nonprofits.
+          </p>
+          <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-5 mb-5">
+            <p className="text-green-300 text-3xl font-bold mb-1">$10,000 / month</p>
+            <p className="text-green-200/80 text-sm">in free Google Search advertising — every month, at no cost to you.</p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
+            {[
+              { title: "Reach the right people", body: "Show up when families search for camps, programs, and services like yours — without paying per click." },
+              { title: "No ad spend required", body: "$10,000/month in Google Ads credit, renewed monthly. Eligible nonprofits have used this to drive thousands of new visitors." },
+              { title: "Requires a strategy", body: "Google Grants accounts have strict quality requirements. Without proper management, accounts get suspended. We set it up right." },
+              { title: "We manage it for you", body: "From application to optimization, we handle the entire Grants account so you can focus on your mission." },
+            ].map(({ title, body }) => (
+              <div key={title} className="bg-[#F5F5F5]/3 border border-green-500/10 rounded-xl p-4">
+                <p className="text-[#F5F5F5] font-semibold text-sm mb-1">{title}</p>
+                <p className="text-[#F5F5F5]/50 text-xs leading-relaxed">{body}</p>
+              </div>
+            ))}
+          </div>
+          <div className="bg-[#F5F5F5]/3 border border-green-500/20 rounded-xl p-4">
+            <p className="text-[#F5F5F5]/60 text-xs">
+              <span className="text-green-400 font-semibold">How to qualify:</span> Active 501(c)(3) status ✓ · 
+              Registered with Google for Nonprofits · Website quality standards · Mission-aligned ad content. 
+              Most eligible nonprofits are approved within 2–4 weeks.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* ── H. The Opportunity (CTA) ─────────────────────────────────────── */}
       <div className="relative overflow-hidden rounded-2xl border border-pink/30 bg-gradient-to-br from-pink/20 via-[#000022] to-[#000022] p-10 text-center">
         {/* Glow */}
         <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-64 h-64 bg-pink/20 rounded-full blur-3xl pointer-events-none" />
