@@ -1,7 +1,6 @@
 import { db } from "@/lib/db/client";
 import { sql } from "drizzle-orm";
 import { notFound } from "next/navigation";
-import { ProspectKeywordTabs, type KeywordRow } from "@/components/prospect/ProspectKeywordTabs";
 import {
   Globe,
   Zap,
@@ -45,6 +44,14 @@ interface KeywordIdea {
   search_volume?: number;
   avg_cpc?: number;
   competition?: string | number;
+}
+
+interface KeywordRow {
+  name: string;
+  position: number | null;
+  volume: number;
+  cpc: number | null;
+  isForcedBrand?: boolean;
 }
 
 interface Competitor {
@@ -234,6 +241,24 @@ function formatCls(val?: number | string): string {
   return n.toFixed(3);
 }
 
+// CTR estimate midpoint by position
+function estimateCtr(pos: number): number {
+  if (pos === 1) return 0.30;
+  if (pos === 2) return 0.215;
+  if (pos === 3) return 0.15;
+  if (pos === 4) return 0.10;
+  if (pos === 5) return 0.075;
+  if (pos <= 7) return 0.055;
+  if (pos <= 10) return 0.04;
+  if (pos <= 20) return 0.02;
+  return 0;
+}
+
+function formatClicks(n: number): string {
+  if (n >= 1000) return `${Math.round(n / 1000)}k`;
+  return String(Math.round(n));
+}
+
 // ─── Score Ring SVG ───────────────────────────────────────────────────────────
 
 function ScoreRing({ score, label }: { score: number; label: string }) {
@@ -322,13 +347,6 @@ export default async function ProspectReportPage({
   const allCompetitors: Competitor[] = Array.isArray(p.competitors) ? p.competitors : [];
   const ps: PagespeedData = p.pagespeed_data || {};
 
-  // Top 10 ranked keywords sorted by position
-  const top10Ranked = ranked
-    .map((kw) => ({ ...kw, _pos: getPosition(kw), _name: getKeywordName(kw), _vol: getVolume(kw) }))
-    .filter((kw) => kw._pos < 999 && kw._name)
-    .sort((a, b) => a._pos - b._pos)
-    .slice(0, 10);
-
   // Build keyword rows from DB data
   const domainBase = domain.replace(/\.(com|net|org|io|co|us)$/, "").replace(/-/g, "").toLowerCase();
 
@@ -398,8 +416,27 @@ export default async function ProspectReportPage({
     .filter((k) => isBrandedKw(k.name, k.isForcedBrand ?? false))
     .map((k) => ({ ...k, isForcedBrand: k.isForcedBrand }));
 
-  const keywordRows = allKeywordRows;
   const isBrandedOnly = ranked.length > 0 && discoveryKeywords.length === 0;
+
+  // Filter ideas to only those with actual search volume
+  const filteredIdeas = ideas.filter((idea) => getVolume(idea) > 0);
+
+  // Merge discoveryKeywords + filteredIdeas → deduplicated, sorted by volume desc
+  const discoveryNames = new Set(discoveryKeywords.map((k) => k.name.toLowerCase()));
+  const ideaRows: KeywordRow[] = filteredIdeas
+    .filter((idea) => !discoveryNames.has(getKeywordName(idea).toLowerCase()))
+    .map((idea) => ({
+      name: getKeywordName(idea),
+      position: null,
+      volume: getVolume(idea),
+      cpc: getIdeaCpc(idea) ?? null,
+    }))
+    .filter((k) => k.name);
+
+  const opportunityKeywords: KeywordRow[] = [
+    ...discoveryKeywords,
+    ...ideaRows,
+  ].sort((a, b) => b.volume - a.volume);
 
   // Filter and categorize competitors
   const nonSocialCompetitors = allCompetitors.filter((c) => {
@@ -427,14 +464,21 @@ export default async function ProspectReportPage({
     .filter((s): s is number => typeof s === "number");
   const avgScore = scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : null;
 
-  // Filter ideas to only those with actual search volume
-  const filteredIdeas = ideas.filter((idea) => getVolume(idea) > 0);
-
-  // Max volume for bar
-  const maxVol = Math.max(...filteredIdeas.map(getVolume), 1);
-
   const isLawFirm = p.prospect_type === "law_firm";
   const isNonprofit = p.prospect_type === "nonprofit" || !!(ps as any).nonprofit_501c3;
+
+  // Social links from pagespeed data
+  const socialLinks: Record<string, string> = (ps as any).social_links ?? {};
+  const SOCIAL_PLATFORMS = ["facebook", "instagram", "twitter", "linkedin", "youtube", "tiktok"] as const;
+
+  // Brand footprint stats
+  const totalRanked = ranked.length;
+  const bestPosition = allKeywordRows.reduce<number | null>((best, k) => {
+    if (k.position === null) return best;
+    if (best === null || k.position < best) return k.position;
+    return best;
+  }, null);
+  const totalBrandedVolume = brandedKeywords.reduce((sum, k) => sum + k.volume, 0);
 
   // ── Render ───────────────────────────────────────────────────────────────
 
@@ -492,81 +536,188 @@ export default async function ProspectReportPage({
         )}
       </div>
 
-      {/* ── B. Current Footprint ───────────────────────────────────────── */}
+      {/* ── B. Brand Footprint ────────────────────────────────────────── */}
       <div className="bg-[#000022] border border-pink/20 rounded-2xl p-8">
         <div className="flex items-center gap-3 mb-2">
           <BarChart3 className="h-5 w-5 text-pink" />
           <h2 className="font-heading text-3xl text-[#F5F5F5]">Brand Footprint</h2>
         </div>
         <p className="text-[#F5F5F5]/50 text-sm mb-6">
-          {ranked.length > 0
-            ? `${domain} is ranking for ${ranked.length} keyword${ranked.length !== 1 ? "s" : ""} in Google.`
-            : "No ranking data captured yet."}
+          How {domain} shows up across search and social media.
         </p>
 
-        {keywordRows.length > 0 ? (
-          <ProspectKeywordTabs
-            discoveryKeywords={discoveryKeywords}
-            brandedKeywords={brandedKeywords}
-            isBrandedOnly={isBrandedOnly}
-          />
-        ) : (
-          <p className="text-[#F5F5F5]/30 text-sm italic">No ranking data available.</p>
-        )}
-      </div>
-
-      {/* ── C. Untapped Opportunities ──────────────────────────────────── */}
-      {filteredIdeas.length > 0 && (
-        <div className="bg-[#000022] border border-pink/20 rounded-2xl p-8">
-          <div className="flex items-center gap-3 mb-2">
-            <TrendingUp className="h-5 w-5 text-pink" />
-            <h2 className="font-heading text-3xl text-[#F5F5F5]">Opportunities</h2>
+        {/* Summary stats */}
+        <div className="grid grid-cols-3 gap-4 mb-6">
+          <div className="bg-[#F5F5F5]/3 border border-pink/10 rounded-xl p-4 text-center">
+            <p className="text-2xl font-bold text-[#F5F5F5]">{totalRanked}</p>
+            <p className="text-[#F5F5F5]/50 text-xs mt-1">Keywords Ranked</p>
           </div>
-          <p className="text-[#F5F5F5]/50 text-sm mb-6">
-            People are actively searching for these terms. Here&apos;s what you could capture.
-          </p>
+          <div className="bg-[#F5F5F5]/3 border border-pink/10 rounded-xl p-4 text-center">
+            <p className="text-2xl font-bold text-[#F5F5F5]">
+              {bestPosition !== null ? `#${bestPosition}` : "—"}
+            </p>
+            <p className="text-[#F5F5F5]/50 text-xs mt-1">Best Position</p>
+          </div>
+          <div className="bg-[#F5F5F5]/3 border border-pink/10 rounded-xl p-4 text-center">
+            <p className="text-2xl font-bold text-[#F5F5F5]">
+              {totalBrandedVolume > 0 ? totalBrandedVolume.toLocaleString() : "—"}
+            </p>
+            <p className="text-[#F5F5F5]/50 text-xs mt-1">Branded Vol/Mo</p>
+          </div>
+        </div>
 
-          <div className="grid gap-4">
-            {filteredIdeas.map((idea, i) => {
-              const name = getKeywordName(idea);
-              const vol = getVolume(idea);
-              const cpc = getIdeaCpc(idea);
-              const comp = getIdeaCompetition(idea);
-              if (!name) return null;
-
+        {/* Social media presence */}
+        <div className="mb-6">
+          <p className="text-[#F5F5F5]/40 text-xs uppercase tracking-wider mb-3">Social Media Presence</p>
+          <div className="flex flex-wrap gap-3">
+            {SOCIAL_PLATFORMS.map((platform) => {
+              const url = socialLinks[platform];
+              const isPresent = !!url;
               return (
-                <div key={i} className="bg-[#F5F5F5]/3 border border-pink/10 hover:border-pink/25 rounded-xl p-5 transition-colors">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-2 flex-wrap">
-                        <h3 className="text-[#F5F5F5] font-semibold text-base">{name}</h3>
-                        <CompBadge level={comp} />
-                      </div>
-                      {vol > 0 && <VolumeBar volume={vol} max={maxVol} />}
-                    </div>
-
-                    <div className="text-right shrink-0 flex flex-col items-end gap-1">
-                      {vol > 0 && (
-                        <p className="text-[#F5F5F5]/70 text-sm font-semibold">{vol.toLocaleString()}<span className="text-[#F5F5F5]/40 text-xs font-normal"> /mo</span></p>
-                      )}
-                      {cpc > 0 && (
-                        <p className="text-pink text-sm font-semibold">${cpc.toFixed(2)}<span className="text-[#F5F5F5]/40 text-xs font-normal"> /click</span></p>
-                      )}
-                    </div>
-                  </div>
-
-                  <p className="text-[#F5F5F5]/40 text-xs mt-3 flex items-center gap-1.5">
-                    <ChevronRight className="h-3 w-3 text-pink" />
-                    {vol > 0
-                      ? `${vol.toLocaleString()} people search this every month — none of them are finding you.`
-                      : "High-intent keyword with untapped potential."}
-                  </p>
+                <div
+                  key={platform}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm ${
+                    isPresent
+                      ? "bg-emerald-400/5 border-emerald-400/20"
+                      : "bg-[#F5F5F5]/3 border-[#F5F5F5]/10"
+                  }`}
+                >
+                  <span
+                    className={`w-2 h-2 rounded-full shrink-0 ${
+                      isPresent ? "bg-emerald-400" : "bg-[#F5F5F5]/20"
+                    }`}
+                  />
+                  {isPresent ? (
+                    <a
+                      href={url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-emerald-400 hover:underline capitalize"
+                    >
+                      {platform}
+                    </a>
+                  ) : (
+                    <span className="text-[#F5F5F5]/30 capitalize">{platform}</span>
+                  )}
                 </div>
               );
             })}
           </div>
         </div>
-      )}
+
+        {/* Branded keywords table */}
+        <div>
+          <p className="text-[#F5F5F5]/40 text-xs uppercase tracking-wider mb-3">Brand Keywords</p>
+          {brandedKeywords.length === 0 ? (
+            <p className="text-[#F5F5F5]/30 text-sm italic">No brand keyword data found.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-pink/10">
+                    <th className="text-left text-[#F5F5F5]/40 text-xs font-medium pb-2 pr-4">Keyword</th>
+                    <th className="text-left text-[#F5F5F5]/40 text-xs font-medium pb-2 pr-4">Rank</th>
+                    <th className="text-left text-[#F5F5F5]/40 text-xs font-medium pb-2">Monthly Searches</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {brandedKeywords.map((kw, i) => (
+                    <tr key={i} className="border-b border-pink/5 last:border-0">
+                      <td className="text-[#F5F5F5] py-2.5 pr-4">{kw.name}</td>
+                      <td className="py-2.5 pr-4">
+                        {kw.position !== null ? (
+                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${positionBg(kw.position)}`}>
+                            #{kw.position}
+                          </span>
+                        ) : (
+                          <span className="text-[#F5F5F5]/30">—</span>
+                        )}
+                      </td>
+                      <td className="py-2.5">
+                        {kw.volume > 0 ? (
+                          <span className="text-[#F5F5F5]/70">{kw.volume.toLocaleString()}/mo</span>
+                        ) : (
+                          <span className="text-[#F5F5F5]/30">—</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── C. Opportunities ──────────────────────────────────────────── */}
+      <div className="bg-[#000022] border border-pink/20 rounded-2xl p-8">
+        <div className="flex items-center gap-3 mb-2">
+          <TrendingUp className="h-5 w-5 text-pink" />
+          <h2 className="font-heading text-3xl text-[#F5F5F5]">Opportunities</h2>
+        </div>
+        <p className="text-[#F5F5F5]/50 text-sm mb-6">
+          Keywords you could be ranking for — and the traffic they represent.
+        </p>
+
+        {/* Branded-only warning */}
+        {isBrandedOnly && opportunityKeywords.length === 0 && (
+          <div className="flex items-start gap-3 bg-orange-400/10 border border-orange-400/30 rounded-xl p-4 mb-6">
+            <AlertCircle className="h-4 w-4 text-orange-400 mt-0.5 shrink-0" />
+            <p className="text-orange-300 text-sm">
+              <span className="font-semibold">Branded traffic only.</span> This site ranks almost exclusively for brand-name searches — meaning people who already know about you. There&apos;s a significant opportunity to capture new customers who don&apos;t know the brand yet.
+            </p>
+          </div>
+        )}
+
+        {opportunityKeywords.length === 0 ? (
+          <p className="text-[#F5F5F5]/30 text-sm italic">No opportunity keywords found.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-pink/10">
+                  <th className="text-left text-[#F5F5F5]/40 text-xs font-medium pb-2 pr-4">Keyword</th>
+                  <th className="text-left text-[#F5F5F5]/40 text-xs font-medium pb-2 pr-4">Rank</th>
+                  <th className="text-left text-[#F5F5F5]/40 text-xs font-medium pb-2 pr-4">Monthly Volume</th>
+                  <th className="text-left text-[#F5F5F5]/40 text-xs font-medium pb-2 pr-4">CPC</th>
+                  <th className="text-left text-[#F5F5F5]/40 text-xs font-medium pb-2">Est. Clicks/Mo</th>
+                </tr>
+              </thead>
+              <tbody>
+                {opportunityKeywords.map((kw, i) => {
+                  const ctr = kw.position !== null ? estimateCtr(kw.position) : null;
+                  const estClicks = ctr !== null && kw.volume > 0
+                    ? formatClicks(kw.volume * ctr)
+                    : null;
+                  return (
+                    <tr key={i} className="border-b border-pink/5 last:border-0 hover:bg-[#F5F5F5]/2 transition-colors">
+                      <td className="text-[#F5F5F5] py-2.5 pr-4 font-medium">{kw.name}</td>
+                      <td className="py-2.5 pr-4">
+                        {kw.position !== null ? (
+                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${positionBg(kw.position)}`}>
+                            #{kw.position}
+                          </span>
+                        ) : (
+                          <span className="text-[#F5F5F5]/30">—</span>
+                        )}
+                      </td>
+                      <td className="py-2.5 pr-4 text-[#F5F5F5]/70">
+                        {kw.volume > 0 ? `${kw.volume.toLocaleString()}/mo` : "—"}
+                      </td>
+                      <td className="py-2.5 pr-4 text-[#F5F5F5]/70">
+                        {kw.cpc && kw.cpc > 0 ? `$${kw.cpc.toFixed(2)}` : "—"}
+                      </td>
+                      <td className="py-2.5 text-[#F5F5F5]/70">
+                        {estClicks !== null ? `~${estClicks}` : "—"}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
 
       {/* ── D. Brand Variants (if detected) ────────────────────────────── */}
       {brandVariants.length > 0 && (
