@@ -1,14 +1,13 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { BarChart } from "@/components/charts/BarChart";
-import { TrendingUp, Search, RefreshCw, ChevronUp, ChevronDown, ChevronRight } from "lucide-react";
+import { TrendingUp, Search, RefreshCw, ChevronUp, ChevronDown, ChevronRight, Settings } from "lucide-react";
 
 interface TrackedKeyword {
-  id: string;
+  id: string | null;
   keyword: string;
-  domain: string;
-  user_id: string | null;
+  domain: string | null;
   last_position: number | null;
   last_checked_at: string | null;
   search_volume: number | null;
@@ -17,7 +16,12 @@ interface TrackedKeyword {
   competition: string | null;
   keyword_difficulty: number | null;
   volume_updated_at: string | null;
-  created_at: string;
+  created_at: string | null;
+  // GSC fields
+  gsc_avg_position: number | null;
+  gsc_impressions: number | null;
+  gsc_clicks: number | null;
+  gsc_ctr: number | null;
 }
 
 interface Stats {
@@ -62,9 +66,43 @@ interface DomainMetrics {
   relatedKeywords: RelatedKeyword[];
 }
 
-type SortKey = "keyword" | "last_position" | "last_checked_at" | "search_volume" | "annual_volume" | "keyword_difficulty";
+type SortKey = "keyword" | "last_position" | "last_checked_at" | "search_volume" | "annual_volume" | "keyword_difficulty" | "gsc_avg_position" | "gsc_impressions";
 type SortDir = "asc" | "desc";
 type Tab = "keywords" | "related";
+
+// Column definitions
+const COLUMN_DEFS = [
+  { key: "dfs_position", label: "DFS Rank", defaultOn: true },
+  { key: "gsc_position", label: "GSC Position", defaultOn: true },
+  { key: "gsc_impressions", label: "Impressions", defaultOn: true },
+  { key: "gsc_clicks", label: "Clicks", defaultOn: false },
+  { key: "gsc_ctr", label: "CTR", defaultOn: false },
+  { key: "search_volume", label: "Monthly Vol", defaultOn: true },
+  { key: "annual_volume", label: "Annual Vol", defaultOn: false },
+  { key: "keyword_difficulty", label: "KD", defaultOn: true },
+  { key: "competition", label: "Competition", defaultOn: false },
+  { key: "trend", label: "Trend", defaultOn: false },
+  { key: "last_checked", label: "Last Checked", defaultOn: true },
+] as const;
+
+type ColumnKey = typeof COLUMN_DEFS[number]["key"];
+
+const LS_KEY = "ranktracker-columns-v1";
+
+function loadColumnPrefs(): Record<ColumnKey, boolean> {
+  const defaults: Record<ColumnKey, boolean> = {} as any;
+  COLUMN_DEFS.forEach((c) => { defaults[c.key] = c.defaultOn; });
+  if (typeof window === "undefined") return defaults;
+  try {
+    const stored = localStorage.getItem(LS_KEY);
+    if (stored) return { ...defaults, ...JSON.parse(stored) };
+  } catch {}
+  return defaults;
+}
+
+function saveColumnPrefs(prefs: Record<ColumnKey, boolean>) {
+  try { localStorage.setItem(LS_KEY, JSON.stringify(prefs)); } catch {}
+}
 
 function getPositionColor(pos: number | null): string {
   if (pos === null) return "text-gray-500";
@@ -73,6 +111,14 @@ function getPositionColor(pos: number | null): string {
   if (pos <= 20) return "text-yellow-400";
   if (pos <= 50) return "text-orange-400";
   return "text-red-400/70";
+}
+
+function getGscPositionColor(pos: number | null): string {
+  if (pos === null) return "text-gray-500";
+  if (pos <= 10) return "text-green-400";
+  if (pos <= 30) return "text-yellow-400";
+  if (pos <= 60) return "text-orange-400";
+  return "text-red-400";
 }
 
 function getKdColor(kd: number | null): string {
@@ -135,12 +181,26 @@ export function RankTrackerDashboard({ defaultDomain }: { defaultDomain: string 
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [page, setPage] = useState(1);
   const [activeTab, setActiveTab] = useState<Tab>("keywords");
+  const [columns, setColumns] = useState<Record<ColumnKey, boolean>>(loadColumnPrefs);
+  const [colPickerOpen, setColPickerOpen] = useState(false);
+  const colPickerRef = useRef<HTMLDivElement>(null);
 
   // Domain Metrics
   const [metricsOpen, setMetricsOpen] = useState(true);
   const [metrics, setMetrics] = useState<DomainMetrics | null>(null);
   const [loadingMetrics, setLoadingMetrics] = useState(false);
   const [fetchingMetrics, setFetchingMetrics] = useState(false);
+
+  // Close column picker on outside click
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      if (colPickerRef.current && !colPickerRef.current.contains(e.target as Node)) {
+        setColPickerOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
 
   async function fetchData(d: string) {
     setLoading(true);
@@ -237,6 +297,14 @@ export function RankTrackerDashboard({ defaultDomain }: { defaultDomain: string 
     }
   }
 
+  function toggleColumn(key: ColumnKey) {
+    setColumns((prev) => {
+      const next = { ...prev, [key]: !prev[key] };
+      saveColumnPrefs(next);
+      return next;
+    });
+  }
+
   function handleSort(key: SortKey) {
     if (sortKey === key) {
       setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -252,13 +320,13 @@ export function RankTrackerDashboard({ defaultDomain }: { defaultDomain: string 
       k.keyword.toLowerCase().includes(search.toLowerCase())
     );
     list = [...list].sort((a, b) => {
-      let av: any = a[sortKey];
-      let bv: any = b[sortKey];
+      let av: any = (a as any)[sortKey === "gsc_avg_position" ? "gsc_avg_position" : sortKey === "gsc_impressions" ? "gsc_impressions" : sortKey];
+      let bv: any = (b as any)[sortKey === "gsc_avg_position" ? "gsc_avg_position" : sortKey === "gsc_impressions" ? "gsc_impressions" : sortKey];
       if (sortKey === "last_position") {
         av = av === null ? 999999 : av;
         bv = bv === null ? 999999 : bv;
       }
-      if (sortKey === "search_volume" || sortKey === "annual_volume" || sortKey === "keyword_difficulty") {
+      if (["search_volume", "annual_volume", "keyword_difficulty", "gsc_avg_position", "gsc_impressions"].includes(sortKey)) {
         av = av === null ? -1 : av;
         bv = bv === null ? -1 : bv;
       }
@@ -279,6 +347,12 @@ export function RankTrackerDashboard({ defaultDomain }: { defaultDomain: string 
     if (sortKey !== col) return <span className="opacity-30">↕</span>;
     return sortDir === "asc" ? <ChevronUp className="h-3 w-3 inline" /> : <ChevronDown className="h-3 w-3 inline" />;
   }
+
+  // GSC summary stats from keyword data
+  const gscTotalImpressions = useMemo(() =>
+    keywords.reduce((s, k) => s + (k.gsc_impressions ?? 0), 0), [keywords]);
+  const gscTotalClicks = useMemo(() =>
+    keywords.reduce((s, k) => s + (k.gsc_clicks ?? 0), 0), [keywords]);
 
   return (
     <div className="space-y-6">
@@ -325,7 +399,6 @@ export function RankTrackerDashboard({ defaultDomain }: { defaultDomain: string 
           <button
             onClick={() => checkPositions(true)}
             disabled={checking || loading}
-            title={`Check all ${keywords.filter(k => !k.last_checked_at).length} unchecked keywords`}
             className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors"
           >
             <RefreshCw className={`h-4 w-4 ${checking ? "animate-spin" : ""}`} />
@@ -335,7 +408,7 @@ export function RankTrackerDashboard({ defaultDomain }: { defaultDomain: string 
       </div>
 
       {/* Stats cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
         {[
           { label: "Total Keywords", value: stats?.total ?? "—" },
           { label: "Ranking", value: stats?.ranked ?? "—" },
@@ -343,10 +416,12 @@ export function RankTrackerDashboard({ defaultDomain }: { defaultDomain: string 
           { label: "Avg Position", value: stats?.avgPosition ?? "—" },
           { label: "Avg Monthly Vol", value: stats?.avgVolume != null ? stats.avgVolume.toLocaleString() : "—" },
           { label: "Total Monthly Vol", value: stats?.totalVolume ? stats.totalVolume.toLocaleString() : "—" },
+          { label: "GSC Impressions", value: loading ? "…" : gscTotalImpressions.toLocaleString() },
+          { label: "GSC Clicks", value: loading ? "…" : gscTotalClicks.toLocaleString() },
         ].map(({ label, value }) => (
           <div key={label} className="bg-[#000033] border border-pink-500/20 rounded-xl p-4">
             <p className="text-[#F5F5F5]/50 text-xs uppercase tracking-wide mb-1">{label}</p>
-            <p className="text-[#F5F5F5] text-2xl font-bold">{loading ? "…" : value}</p>
+            <p className="text-[#F5F5F5] text-xl font-bold">{loading ? "…" : value}</p>
           </div>
         ))}
       </div>
@@ -372,7 +447,6 @@ export function RankTrackerDashboard({ defaultDomain }: { defaultDomain: string 
         </button>
         {metricsOpen && (
           <div className="px-5 pb-5 grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Traffic Estimate */}
             <div className="bg-[#000022] border border-pink-500/10 rounded-xl p-4">
               <p className="text-[#F5F5F5]/50 text-xs uppercase tracking-wide mb-2">Organic Traffic Estimate (ETV)</p>
               {loadingMetrics ? (
@@ -390,8 +464,6 @@ export function RankTrackerDashboard({ defaultDomain }: { defaultDomain: string 
                 <p className="text-[#F5F5F5]/30 text-sm">No data — click Refresh Data to fetch</p>
               )}
             </div>
-
-            {/* Top Competitors */}
             <div className="bg-[#000022] border border-pink-500/10 rounded-xl p-4">
               <p className="text-[#F5F5F5]/50 text-xs uppercase tracking-wide mb-2">Top Competitors</p>
               {loadingMetrics ? (
@@ -418,13 +490,7 @@ export function RankTrackerDashboard({ defaultDomain }: { defaultDomain: string 
       {/* Distribution chart */}
       <div className="bg-[#000033] border border-pink-500/20 rounded-xl p-5">
         <h2 className="font-heading text-[#F5F5F5] text-lg mb-4">Position Distribution</h2>
-        <BarChart
-          data={distData}
-          dataKey="count"
-          xAxisKey="bucket"
-          color="#FF1493"
-          height={200}
-        />
+        <BarChart data={distData} dataKey="count" xAxisKey="bucket" color="#FF1493" height={200} />
       </div>
 
       {/* Tabs */}
@@ -447,7 +513,7 @@ export function RankTrackerDashboard({ defaultDomain }: { defaultDomain: string 
       {/* Keywords Table */}
       {activeTab === "keywords" && (
         <div className="bg-[#000033] border border-pink-500/20 rounded-xl p-5">
-          <div className="flex items-center gap-3 mb-4">
+          <div className="flex items-center gap-3 mb-4 flex-wrap">
             <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#F5F5F5]/40" />
               <input
@@ -459,66 +525,160 @@ export function RankTrackerDashboard({ defaultDomain }: { defaultDomain: string 
               />
             </div>
             <span className="text-[#F5F5F5]/40 text-sm">{filtered.length} keywords</span>
+            <div className="ml-auto relative" ref={colPickerRef}>
+              <button
+                onClick={() => setColPickerOpen((o) => !o)}
+                className="flex items-center gap-2 px-3 py-2 bg-pink-500/10 hover:bg-pink-500/20 border border-pink-500/30 text-pink-400 text-sm rounded-lg transition-colors"
+              >
+                <Settings className="h-4 w-4" />
+                Columns
+              </button>
+              {colPickerOpen && (
+                <div className="absolute right-0 top-full mt-2 w-52 bg-[#000033] border border-pink-500/30 rounded-xl shadow-xl z-10 p-3">
+                  <p className="text-[#F5F5F5]/50 text-xs uppercase tracking-wide mb-2 px-1">Toggle Columns</p>
+                  <div className="space-y-1">
+                    {COLUMN_DEFS.map((col) => (
+                      <label key={col.key} className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-[#F5F5F5]/5 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={columns[col.key]}
+                          onChange={() => toggleColumn(col.key)}
+                          className="accent-pink-500"
+                        />
+                        <span className="text-[#F5F5F5]/80 text-sm">{col.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-pink-500/20">
-                  {[
-                    { key: "keyword" as SortKey, label: "Keyword" },
-                    { key: "last_position" as SortKey, label: "Position" },
-                    { key: null, label: "Change" },
-                    { key: "search_volume" as SortKey, label: "Monthly Vol" },
-                    { key: "annual_volume" as SortKey, label: "Annual Vol" },
-                    { key: "keyword_difficulty" as SortKey, label: "KD" },
-                    { key: null, label: "Trend" },
-                    { key: "last_checked_at" as SortKey, label: "Last Checked" },
-                  ].map(({ key, label }) => (
-                    <th
-                      key={label}
-                      onClick={() => key && handleSort(key)}
-                      className={`text-left py-2 px-3 text-[#F5F5F5]/50 font-medium uppercase text-xs tracking-wide ${key ? "cursor-pointer hover:text-[#F5F5F5] select-none" : ""}`}
-                    >
-                      {label} {key && <SortIcon col={key} />}
+                  <th
+                    onClick={() => handleSort("keyword")}
+                    className="text-left py-2 px-3 text-[#F5F5F5]/50 font-medium uppercase text-xs tracking-wide cursor-pointer hover:text-[#F5F5F5] select-none"
+                  >
+                    Keyword <SortIcon col="keyword" />
+                  </th>
+                  {columns.dfs_position && (
+                    <th onClick={() => handleSort("last_position")} className="text-left py-2 px-3 text-[#F5F5F5]/50 font-medium uppercase text-xs tracking-wide cursor-pointer hover:text-[#F5F5F5] select-none whitespace-nowrap">
+                      DFS Rank <SortIcon col="last_position" />
                     </th>
-                  ))}
+                  )}
+                  {columns.gsc_position && (
+                    <th onClick={() => handleSort("gsc_avg_position")} className="text-left py-2 px-3 text-[#F5F5F5]/50 font-medium uppercase text-xs tracking-wide cursor-pointer hover:text-[#F5F5F5] select-none whitespace-nowrap">
+                      GSC Position <SortIcon col="gsc_avg_position" />
+                    </th>
+                  )}
+                  {columns.gsc_impressions && (
+                    <th onClick={() => handleSort("gsc_impressions")} className="text-left py-2 px-3 text-[#F5F5F5]/50 font-medium uppercase text-xs tracking-wide cursor-pointer hover:text-[#F5F5F5] select-none">
+                      Impressions <SortIcon col="gsc_impressions" />
+                    </th>
+                  )}
+                  {columns.gsc_clicks && (
+                    <th className="text-left py-2 px-3 text-[#F5F5F5]/50 font-medium uppercase text-xs tracking-wide">Clicks</th>
+                  )}
+                  {columns.gsc_ctr && (
+                    <th className="text-left py-2 px-3 text-[#F5F5F5]/50 font-medium uppercase text-xs tracking-wide">CTR</th>
+                  )}
+                  {columns.search_volume && (
+                    <th onClick={() => handleSort("search_volume")} className="text-left py-2 px-3 text-[#F5F5F5]/50 font-medium uppercase text-xs tracking-wide cursor-pointer hover:text-[#F5F5F5] select-none whitespace-nowrap">
+                      Monthly Vol <SortIcon col="search_volume" />
+                    </th>
+                  )}
+                  {columns.annual_volume && (
+                    <th onClick={() => handleSort("annual_volume")} className="text-left py-2 px-3 text-[#F5F5F5]/50 font-medium uppercase text-xs tracking-wide cursor-pointer hover:text-[#F5F5F5] select-none whitespace-nowrap">
+                      Annual Vol <SortIcon col="annual_volume" />
+                    </th>
+                  )}
+                  {columns.keyword_difficulty && (
+                    <th onClick={() => handleSort("keyword_difficulty")} className="text-left py-2 px-3 text-[#F5F5F5]/50 font-medium uppercase text-xs tracking-wide cursor-pointer hover:text-[#F5F5F5] select-none">
+                      KD <SortIcon col="keyword_difficulty" />
+                    </th>
+                  )}
+                  {columns.competition && (
+                    <th className="text-left py-2 px-3 text-[#F5F5F5]/50 font-medium uppercase text-xs tracking-wide">Competition</th>
+                  )}
+                  {columns.trend && (
+                    <th className="text-left py-2 px-3 text-[#F5F5F5]/50 font-medium uppercase text-xs tracking-wide">Trend</th>
+                  )}
+                  {columns.last_checked && (
+                    <th onClick={() => handleSort("last_checked_at")} className="text-left py-2 px-3 text-[#F5F5F5]/50 font-medium uppercase text-xs tracking-wide cursor-pointer hover:text-[#F5F5F5] select-none whitespace-nowrap">
+                      Last Checked <SortIcon col="last_checked_at" />
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
-                  <tr>
-                    <td colSpan={8} className="text-center py-12 text-[#F5F5F5]/40">Loading…</td>
-                  </tr>
+                  <tr><td colSpan={12} className="text-center py-12 text-[#F5F5F5]/40">Loading…</td></tr>
                 ) : paginated.length === 0 ? (
-                  <tr>
-                    <td colSpan={8} className="text-center py-12 text-[#F5F5F5]/40">No keywords found</td>
-                  </tr>
+                  <tr><td colSpan={12} className="text-center py-12 text-[#F5F5F5]/40">No keywords found</td></tr>
                 ) : (
-                  paginated.map((kw) => (
-                    <tr key={kw.id} className="border-b border-[#F5F5F5]/5 hover:bg-[#F5F5F5]/2">
+                  paginated.map((kw, i) => (
+                    <tr key={kw.id ?? `kw-${i}`} className="border-b border-[#F5F5F5]/5 hover:bg-[#F5F5F5]/2">
                       <td className="py-2.5 px-3 text-[#F5F5F5]/80">{kw.keyword}</td>
-                      <td className={`py-2.5 px-3 font-mono font-bold ${getPositionColor(kw.last_position)}`}>
-                        {kw.last_position !== null
-                          ? kw.last_position
-                          : kw.last_checked_at
-                            ? <span className="text-xs font-normal text-[#F5F5F5]/30">NR</span>
-                            : <span className="text-xs font-normal text-[#F5F5F5]/20">—</span>}
-                      </td>
-                      <td className="py-2.5 px-3 text-[#F5F5F5]/40">—</td>
-                      <td className="py-2.5 px-3 text-[#F5F5F5]/70 font-mono">
-                        {kw.search_volume?.toLocaleString() ?? "—"}
-                      </td>
-                      <td className="py-2.5 px-3 text-[#F5F5F5]/70 font-mono">
-                        {kw.annual_volume?.toLocaleString() ?? "—"}
-                      </td>
-                      <td className={`py-2.5 px-3 font-mono font-semibold ${getKdColor(kw.keyword_difficulty)}`}>
-                        {kw.keyword_difficulty !== null ? kw.keyword_difficulty : "—"}
-                      </td>
-                      <td className="py-2.5 px-3">
-                        <VolumeTrend monthly={kw.monthly_searches} />
-                      </td>
-                      <td className="py-2.5 px-3 text-[#F5F5F5]/50">{formatDate(kw.last_checked_at)}</td>
+                      {columns.dfs_position && (
+                        <td className={`py-2.5 px-3 font-mono font-bold ${getPositionColor(kw.last_position)}`}>
+                          {kw.last_position !== null
+                            ? kw.last_position
+                            : kw.last_checked_at
+                              ? <span className="text-xs font-normal text-[#F5F5F5]/30">NR</span>
+                              : <span className="text-xs font-normal text-[#F5F5F5]/20">—</span>}
+                        </td>
+                      )}
+                      {columns.gsc_position && (
+                        <td className={`py-2.5 px-3 font-mono font-bold ${getGscPositionColor(kw.gsc_avg_position)}`}>
+                          {kw.gsc_avg_position !== null ? kw.gsc_avg_position.toFixed(1) : "—"}
+                        </td>
+                      )}
+                      {columns.gsc_impressions && (
+                        <td className="py-2.5 px-3 text-[#F5F5F5]/70 font-mono">
+                          {kw.gsc_impressions?.toLocaleString() ?? "—"}
+                        </td>
+                      )}
+                      {columns.gsc_clicks && (
+                        <td className="py-2.5 px-3 text-[#F5F5F5]/70 font-mono">
+                          {kw.gsc_clicks?.toLocaleString() ?? "—"}
+                        </td>
+                      )}
+                      {columns.gsc_ctr && (
+                        <td className="py-2.5 px-3 text-[#F5F5F5]/70 font-mono">
+                          {kw.gsc_ctr !== null ? `${(kw.gsc_ctr * 100).toFixed(1)}%` : "—"}
+                        </td>
+                      )}
+                      {columns.search_volume && (
+                        <td className="py-2.5 px-3 text-[#F5F5F5]/70 font-mono">
+                          {kw.search_volume?.toLocaleString() ?? "—"}
+                        </td>
+                      )}
+                      {columns.annual_volume && (
+                        <td className="py-2.5 px-3 text-[#F5F5F5]/70 font-mono">
+                          {kw.annual_volume?.toLocaleString() ?? "—"}
+                        </td>
+                      )}
+                      {columns.keyword_difficulty && (
+                        <td className={`py-2.5 px-3 font-mono font-semibold ${getKdColor(kw.keyword_difficulty)}`}>
+                          {kw.keyword_difficulty !== null ? kw.keyword_difficulty : "—"}
+                        </td>
+                      )}
+                      {columns.competition && (
+                        <td className="py-2.5 px-3 text-[#F5F5F5]/60 font-mono text-xs">
+                          {kw.competition ?? "—"}
+                        </td>
+                      )}
+                      {columns.trend && (
+                        <td className="py-2.5 px-3">
+                          <VolumeTrend monthly={kw.monthly_searches} />
+                        </td>
+                      )}
+                      {columns.last_checked && (
+                        <td className="py-2.5 px-3 text-[#F5F5F5]/50">{formatDate(kw.last_checked_at)}</td>
+                      )}
                     </tr>
                   ))
                 )}
@@ -526,7 +686,6 @@ export function RankTrackerDashboard({ defaultDomain }: { defaultDomain: string 
             </table>
           </div>
 
-          {/* Pagination */}
           {totalPages > 1 && (
             <div className="flex items-center justify-between mt-4 pt-4 border-t border-pink-500/10">
               <button
@@ -536,9 +695,7 @@ export function RankTrackerDashboard({ defaultDomain }: { defaultDomain: string 
               >
                 Previous
               </button>
-              <span className="text-[#F5F5F5]/50 text-sm">
-                Page {page} of {totalPages}
-              </span>
+              <span className="text-[#F5F5F5]/50 text-sm">Page {page} of {totalPages}</span>
               <button
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
@@ -577,9 +734,7 @@ export function RankTrackerDashboard({ defaultDomain }: { defaultDomain: string 
                 <thead>
                   <tr className="border-b border-pink-500/20">
                     {["Keyword", "Volume", "KD", "Competition"].map((h) => (
-                      <th key={h} className="text-left py-2 px-3 text-[#F5F5F5]/50 font-medium uppercase text-xs tracking-wide">
-                        {h}
-                      </th>
+                      <th key={h} className="text-left py-2 px-3 text-[#F5F5F5]/50 font-medium uppercase text-xs tracking-wide">{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -587,15 +742,11 @@ export function RankTrackerDashboard({ defaultDomain }: { defaultDomain: string 
                   {metrics.relatedKeywords.map((rk, i) => (
                     <tr key={i} className="border-b border-[#F5F5F5]/5 hover:bg-[#F5F5F5]/2">
                       <td className="py-2.5 px-3 text-[#F5F5F5]/80">{rk.related_keyword}</td>
-                      <td className="py-2.5 px-3 text-[#F5F5F5]/70 font-mono">
-                        {rk.search_volume?.toLocaleString() ?? "—"}
-                      </td>
+                      <td className="py-2.5 px-3 text-[#F5F5F5]/70 font-mono">{rk.search_volume?.toLocaleString() ?? "—"}</td>
                       <td className={`py-2.5 px-3 font-mono font-semibold ${getKdColor(rk.keyword_difficulty)}`}>
                         {rk.keyword_difficulty !== null ? rk.keyword_difficulty : "—"}
                       </td>
-                      <td className="py-2.5 px-3 text-[#F5F5F5]/60 font-mono">
-                        {rk.competition !== null ? rk.competition : "—"}
-                      </td>
+                      <td className="py-2.5 px-3 text-[#F5F5F5]/60 font-mono">{rk.competition !== null ? rk.competition : "—"}</td>
                     </tr>
                   ))}
                 </tbody>

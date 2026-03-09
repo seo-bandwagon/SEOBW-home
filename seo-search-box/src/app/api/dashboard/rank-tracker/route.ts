@@ -10,7 +10,29 @@ export async function GET(request: NextRequest) {
 
   try {
     const keywords = await db.execute(
-      sql`SELECT id, keyword, domain, last_position, last_checked_at, search_volume, annual_volume, monthly_searches, competition, keyword_difficulty, volume_updated_at, created_at FROM tracked_keywords WHERE domain = ${domain} ORDER BY last_position ASC NULLS LAST, created_at DESC`
+      sql`SELECT 
+        COALESCE(tk.keyword, gsc.query) as keyword,
+        tk.id,
+        tk.domain,
+        tk.last_position,
+        tk.last_checked_at,
+        tk.search_volume,
+        tk.annual_volume,
+        tk.monthly_searches,
+        tk.competition,
+        tk.keyword_difficulty,
+        tk.volume_updated_at,
+        tk.created_at,
+        gsc.avg_position as gsc_avg_position,
+        gsc.impressions as gsc_impressions,
+        gsc.clicks as gsc_clicks,
+        gsc.ctr as gsc_ctr
+      FROM tracked_keywords tk
+      FULL OUTER JOIN gsc_query_data gsc
+        ON tk.keyword = gsc.query
+        AND gsc.site_url = 'sc-domain:' || tk.domain
+      WHERE COALESCE(tk.domain, ${domain}) = ${domain}
+      ORDER BY tk.last_position ASC NULLS LAST, gsc.impressions DESC NULLS LAST, tk.created_at DESC`
     ) as any[];
 
     const ranked = keywords.filter((k: any) => k.last_position !== null);
