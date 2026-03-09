@@ -1070,26 +1070,7 @@ export default async function ProspectReportPage({
               )}
             </div>
 
-            {/* Google Ad Grants — shown only when 501(c)(3) detected via schema or prospect_type */}
-            {isNonprofit && (
-              <div className="mt-5 flex items-start gap-4 bg-blue-500/10 border border-blue-400/30 rounded-xl p-5">
-                <span className="text-2xl shrink-0">🎁</span>
-                <div>
-                  <p className="text-blue-300 text-sm font-bold mb-1">This organization qualifies for Google Ad Grants</p>
-                  <p className="text-[#F5F5F5]/50 text-sm mb-3">
-                    As a 501(c)(3) nonprofit, {domain} is eligible for up to <span className="text-blue-300 font-semibold">$10,000/month in free Google Search advertising</span> through the Google Ad Grants program — every month, indefinitely.
-                  </p>
-                  <a
-                    href="https://www.google.com/grants/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs font-bold px-4 py-2 rounded-lg transition-colors"
-                  >
-                    Apply for Google Ad Grants →
-                  </a>
-                </div>
-              </div>
-            )}
+
           </div>
         );
       })()}
