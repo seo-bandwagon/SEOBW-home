@@ -659,6 +659,23 @@ export default async function ProspectReportPage({
           Keywords you could be ranking for — and the traffic they represent.
         </p>
 
+        {/* Google Ad Grants callout */}
+        <div className="flex items-start gap-3 bg-[#F5F5F5]/3 border border-pink/10 rounded-xl p-4 mb-6">
+          <span className="text-lg shrink-0">🎁</span>
+          <div>
+            <p className="text-[#F5F5F5]/80 text-sm font-semibold mb-0.5">Nonprofit? Google will pay for your ads.</p>
+            <p className="text-[#F5F5F5]/40 text-xs mb-2">Google Ad Grants gives eligible 501(c)(3) organizations up to $10,000/month in free Google Search advertising — every month, indefinitely.</p>
+            <a
+              href="https://www.google.com/grants/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-pink text-xs font-semibold hover:underline"
+            >
+              Apply for Google Ad Grants →
+            </a>
+          </div>
+        </div>
+
         {/* Branded-only warning */}
         {isBrandedOnly && opportunityKeywords.length === 0 && (
           <div className="flex items-start gap-3 bg-orange-400/10 border border-orange-400/30 rounded-xl p-4 mb-6">
