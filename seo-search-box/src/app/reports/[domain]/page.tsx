@@ -471,6 +471,8 @@ export default async function ProspectReportPage({
   const schemaBlocks = (p.schema_data ?? []) as Array<{ "@type"?: string | string[]; [key: string]: unknown }>;
   const schemaSummary = summariseSchema(schemaBlocks);
   const isNonprofit = p.prospect_type === "nonprofit" || !!(ps as any).nonprofit_501c3 || schemaSummary.isNonprofit501c3;
+  // Grants CTA requires actual detection — schema or HTML scrape confirming 501(c)(3)
+  const showGrantsCta = !!(ps as any).nonprofit_501c3 || schemaSummary.isNonprofit501c3;
 
   // Social links from pagespeed data
   const socialLinks: Record<string, string> = (ps as any).social_links ?? {};
@@ -1014,8 +1016,8 @@ export default async function ProspectReportPage({
               )}
             </div>
 
-            {/* Google Ad Grants callout — nonprofits only */}
-            {isNonprofit && (
+            {/* Google Ad Grants callout — only when 501(c)(3) confirmed via schema or HTML scrape */}
+            {showGrantsCta && (
               <div className="mt-6 flex items-start gap-4 bg-blue-500/10 border border-blue-400/30 rounded-xl p-5">
                 <span className="text-2xl shrink-0">🎁</span>
                 <div>
