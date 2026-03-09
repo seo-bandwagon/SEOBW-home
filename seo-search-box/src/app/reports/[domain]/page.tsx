@@ -664,6 +664,28 @@ export default async function ProspectReportPage({
           Keywords you could be ranking for — and the traffic they represent.
         </p>
 
+        {/* Traffic Potential summary */}
+        {opportunityKeywords.length > 0 && (() => {
+          const totalPotential = opportunityKeywords.reduce((sum, kw) => sum + Math.round(kw.volume * 0.30), 0);
+          const totalAdValue = opportunityKeywords.reduce((sum, kw) => sum + (kw.cpc && kw.cpc > 0 ? Math.round(kw.volume * 0.30) * kw.cpc : 0), 0);
+          return (
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <div className="bg-pink/5 border border-pink/20 rounded-xl p-4">
+                <p className="text-[#F5F5F5]/40 text-xs font-medium uppercase tracking-widest mb-1">Page 1 Traffic Potential</p>
+                <p className="text-pink text-2xl font-bold">~{totalPotential >= 1000 ? `${(totalPotential/1000).toFixed(1)}k` : totalPotential.toLocaleString()}</p>
+                <p className="text-[#F5F5F5]/40 text-xs mt-1">visitors/mo if ranking #1 for all opportunities</p>
+              </div>
+              {totalAdValue > 0 && (
+                <div className="bg-[#F5F5F5]/3 border border-pink/10 rounded-xl p-4">
+                  <p className="text-[#F5F5F5]/40 text-xs font-medium uppercase tracking-widest mb-1">Equivalent Ad Value</p>
+                  <p className="text-[#F5F5F5] text-2xl font-bold">${totalAdValue >= 1000 ? `${(totalAdValue/1000).toFixed(1)}k` : totalAdValue.toFixed(0)}</p>
+                  <p className="text-[#F5F5F5]/40 text-xs mt-1">what this traffic would cost in Google Ads/mo</p>
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
         {/* Branded-only warning */}
         {isBrandedOnly && opportunityKeywords.length === 0 && (
           <div className="flex items-start gap-3 bg-orange-400/10 border border-orange-400/30 rounded-xl p-4 mb-6">
@@ -685,7 +707,8 @@ export default async function ProspectReportPage({
                   <th className="text-left text-[#F5F5F5]/40 text-xs font-medium pb-2 pr-4">Rank</th>
                   <th className="text-left text-[#F5F5F5]/40 text-xs font-medium pb-2 pr-4">Monthly Volume</th>
                   <th className="text-left text-[#F5F5F5]/40 text-xs font-medium pb-2 pr-4">CPC</th>
-                  <th className="text-left text-[#F5F5F5]/40 text-xs font-medium pb-2">Est. Clicks/Mo</th>
+                  <th className="text-left text-[#F5F5F5]/40 text-xs font-medium pb-2 pr-4">Est. Current</th>
+                  <th className="text-left text-[#F5F5F5]/40 text-xs font-medium pb-2">Pg. 1 Potential</th>
                 </tr>
               </thead>
               <tbody>
@@ -694,6 +717,7 @@ export default async function ProspectReportPage({
                   const estClicks = ctr !== null && kw.volume > 0
                     ? formatClicks(kw.volume * ctr)
                     : null;
+                  const pg1Potential = kw.volume > 0 ? formatClicks(kw.volume * 0.30) : null;
                   return (
                     <tr key={i} className="border-b border-pink/5 last:border-0 hover:bg-[#F5F5F5]/2 transition-colors">
                       <td className="text-[#F5F5F5] py-2.5 pr-4 font-medium">{kw.name}</td>
@@ -712,8 +736,11 @@ export default async function ProspectReportPage({
                       <td className="py-2.5 pr-4 text-[#F5F5F5]/70">
                         {kw.cpc && kw.cpc > 0 ? `$${kw.cpc.toFixed(2)}` : "—"}
                       </td>
-                      <td className="py-2.5 text-[#F5F5F5]/70">
+                      <td className="py-2.5 pr-4 text-[#F5F5F5]/50 text-xs">
                         {estClicks !== null ? `~${estClicks}` : "—"}
+                      </td>
+                      <td className="py-2.5 text-pink font-semibold text-sm">
+                        {pg1Potential !== null ? `~${pg1Potential}` : "—"}
                       </td>
                     </tr>
                   );
@@ -931,12 +958,30 @@ export default async function ProspectReportPage({
               </div>
             ))}
           </div>
-          <div className="bg-[#F5F5F5]/3 border border-green-500/20 rounded-xl p-4">
+          <div className="bg-[#F5F5F5]/3 border border-green-500/20 rounded-xl p-4 mb-5">
             <p className="text-[#F5F5F5]/60 text-xs">
               <span className="text-green-400 font-semibold">How to qualify:</span> Active 501(c)(3) status ✓ · 
               Registered with Google for Nonprofits · Website quality standards · Mission-aligned ad content. 
               Most eligible nonprofits are approved within 2–4 weeks.
             </p>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <a
+              href="https://www.google.com/grants/how-to-apply/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white text-sm font-bold px-5 py-2.5 rounded-xl transition-colors"
+            >
+              Apply for Google Ad Grants →
+            </a>
+            <a
+              href="https://calendar.app.google/JWAE1wfCYGGjGTin9"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 border border-green-500/40 text-green-300 hover:bg-green-500/10 text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors"
+            >
+              Book a call — we&apos;ll set it up for you
+            </a>
           </div>
         </div>
       )}
