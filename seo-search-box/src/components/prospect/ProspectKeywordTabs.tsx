@@ -10,16 +10,7 @@ export interface KeywordRow {
   cpc: number | null;
 }
 
-function getDomainBase(domain: string): string {
-  return domain.replace(/\.(com|net|org|io|co|us|biz|info)$/, "").replace(/-/g, "").toLowerCase();
-}
-
-function isKeywordBranded(kwName: string, domainBase: string): boolean {
-  const words = kwName.toLowerCase().split(/\s+/);
-  return words.some((w) => w.length >= 5 && domainBase.includes(w));
-}
-
-// CTR range by Google position (organic, desktop averages)
+// CTR range by Google organic position
 function ctrRange(pos: number): [number, number] {
   if (pos === 1) return [0.25, 0.35];
   if (pos === 2) return [0.18, 0.25];
@@ -45,19 +36,15 @@ function positionBg(pos: number): string {
 }
 
 interface Props {
-  keywords: KeywordRow[];
+  discoveryKeywords: KeywordRow[];
+  brandedKeywords: KeywordRow[];
   isBrandedOnly: boolean;
-  domain: string;
 }
 
-export function ProspectKeywordTabs({ keywords, isBrandedOnly, domain }: Props) {
+export function ProspectKeywordTabs({ discoveryKeywords, brandedKeywords, isBrandedOnly }: Props) {
   const [tab, setTab] = useState<"discovery" | "branded">("discovery");
 
-  const domainBase = getDomainBase(domain);
-  const discovery = keywords.filter((k) => !isKeywordBranded(k.name, domainBase) && k.volume > 0);
-  const branded   = keywords.filter((k) => isKeywordBranded(k.name, domainBase));
-
-  const rows = tab === "discovery" ? discovery : branded;
+  const rows = tab === "discovery" ? discoveryKeywords : brandedKeywords;
 
   return (
     <div>
@@ -84,9 +71,9 @@ export function ProspectKeywordTabs({ keywords, isBrandedOnly, domain }: Props) 
           }`}
         >
           Discovery Keywords
-          {discovery.length > 0 && (
+          {discoveryKeywords.length > 0 && (
             <span className="ml-2 text-xs bg-[#F5F5F5]/10 rounded-full px-1.5 py-0.5">
-              {discovery.length}
+              {discoveryKeywords.length}
             </span>
           )}
         </button>
@@ -99,9 +86,9 @@ export function ProspectKeywordTabs({ keywords, isBrandedOnly, domain }: Props) 
           }`}
         >
           Branded Terms
-          {branded.length > 0 && (
+          {brandedKeywords.length > 0 && (
             <span className="ml-2 text-xs bg-[#F5F5F5]/10 rounded-full px-1.5 py-0.5">
-              {branded.length}
+              {brandedKeywords.length}
             </span>
           )}
         </button>
@@ -173,12 +160,6 @@ export function ProspectKeywordTabs({ keywords, isBrandedOnly, domain }: Props) 
             </tbody>
           </table>
         </div>
-      )}
-
-      {tab === "discovery" && discovery.length === 0 && !isBrandedOnly && (
-        <p className="text-[#F5F5F5]/40 text-xs mt-3">
-          Keywords without measurable search volume are excluded from this view.
-        </p>
       )}
     </div>
   );
