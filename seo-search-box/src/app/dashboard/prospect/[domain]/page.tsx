@@ -329,16 +329,7 @@ export default async function ProspectReportPage({
     .sort((a, b) => a._pos - b._pos)
     .slice(0, 10);
 
-  // Brand name extraction for keyword classification
-  const domainBase = domain.replace(/\.(com|net|org|io|co|us)$/, "").replace(/-/g, "").toLowerCase();
-
-  // A keyword is "branded" if any word (5+ chars) in it appears as a substring of domainBase
-  function isKeywordBranded(kwName: string): boolean {
-    const words = kwName.toLowerCase().split(/\s+/);
-    return words.some((w) => w.length >= 5 && domainBase.includes(w));
-  }
-
-  // Build keyword rows for the tabbed component
+  // Build keyword rows — classification (branded/discovery) done client-side in the component
   const keywordRows: KeywordRow[] = ranked
     .map((kw) => {
       const name = getKeywordName(kw);
@@ -351,15 +342,17 @@ export default async function ProspectReportPage({
         position: pos < 999 ? pos : null,
         volume: vol,
         cpc: typeof rawCpc === "number" ? rawCpc : null,
-        isBranded: isKeywordBranded(name),
       };
     })
     .filter((k) => k.name)
     .sort((a, b) => (a.position ?? 999) - (b.position ?? 999));
 
-  // Branded-only detection: no discovery keywords with volume
-  const hasDiscovery = keywordRows.some((k) => !k.isBranded && k.volume > 0);
-  const isBrandedOnly = ranked.length > 0 && !hasDiscovery;
+  // Rough branded-only check for the orange warning (client component also computes this accurately)
+  const domainBase = domain.replace(/\.(com|net|org|io|co|us)$/, "").replace(/-/g, "").toLowerCase();
+  const isBrandedOnly = ranked.length > 0 && keywordRows.every((k) => {
+    const words = k.name.toLowerCase().split(/\s+/);
+    return words.some((w) => w.length >= 5 && domainBase.includes(w));
+  });
 
   // Filter and categorize competitors
   const nonSocialCompetitors = allCompetitors.filter((c) => {

@@ -8,7 +8,15 @@ export interface KeywordRow {
   position: number | null;
   volume: number;
   cpc: number | null;
-  isBranded: boolean;
+}
+
+function getDomainBase(domain: string): string {
+  return domain.replace(/\.(com|net|org|io|co|us|biz|info)$/, "").replace(/-/g, "").toLowerCase();
+}
+
+function isKeywordBranded(kwName: string, domainBase: string): boolean {
+  const words = kwName.toLowerCase().split(/\s+/);
+  return words.some((w) => w.length >= 5 && domainBase.includes(w));
 }
 
 // CTR range by Google position (organic, desktop averages)
@@ -45,8 +53,9 @@ interface Props {
 export function ProspectKeywordTabs({ keywords, isBrandedOnly, domain }: Props) {
   const [tab, setTab] = useState<"discovery" | "branded">("discovery");
 
-  const discovery = keywords.filter((k) => !k.isBranded && k.volume > 0);
-  const branded   = keywords.filter((k) => k.isBranded);
+  const domainBase = getDomainBase(domain);
+  const discovery = keywords.filter((k) => !isKeywordBranded(k.name, domainBase) && k.volume > 0);
+  const branded   = keywords.filter((k) => isKeywordBranded(k.name, domainBase));
 
   const rows = tab === "discovery" ? discovery : branded;
 
