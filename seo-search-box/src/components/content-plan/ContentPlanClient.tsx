@@ -13,8 +13,8 @@ interface KeywordRow {
   target_position: number | null;
   intent: string | null;
   domain: string;
-  et: number;
-  ev: number;
+  et: number | null;
+  ev: number | null;
 }
 
 type SortKey = keyof KeywordRow;
@@ -113,10 +113,11 @@ export function ContentPlanClient() {
   }, [filtered, sortKey, sortDir]);
 
   const stats = useMemo(() => {
-    const totalET = rows.reduce((s, r) => s + r.et, 0);
-    const totalEV = rows.reduce((s, r) => s + r.ev, 0);
+    const totalET = rows.reduce((s, r) => s + (r.et ?? 0), 0);
+    const totalEV = rows.reduce((s, r) => s + (r.ev ?? 0), 0);
     const gapCount = rows.filter((r) => !r.target_url).length;
-    return { totalET, totalEV, gapCount };
+    const noPositionCount = rows.filter((r) => r.target_position === null).length;
+    return { totalET, totalEV, gapCount, noPositionCount };
   }, [rows]);
 
   function handleSort(key: SortKey) {
@@ -311,12 +312,12 @@ export function ContentPlanClient() {
 
                     {/* ET */}
                     <td className={`${tdClass} text-[#F5F5F5]/70`}>
-                      {formatNumber(row.et)}
+                      {row.et !== null ? formatNumber(row.et) : <span className="text-[#F5F5F5]/30">—</span>}
                     </td>
 
                     {/* EV */}
                     <td className={`${tdClass} font-medium text-green-400`}>
-                      {formatCurrency(row.ev)}
+                      {row.ev !== null ? formatCurrency(row.ev) : <span className="text-[#F5F5F5]/30">—</span>}
                     </td>
 
                     {/* Status */}

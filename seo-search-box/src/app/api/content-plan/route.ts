@@ -59,6 +59,9 @@ export async function GET(request: NextRequest) {
       const et = Math.round(volume * ctr);
       const ev = parseFloat((et * cpc).toFixed(2));
 
+      // If no target_position set, ET/EV are meaningless — flag as null
+      const hasPosition = targetPosition !== null;
+
       return {
         keyword: row.keyword,
         target_url: row.target_url ?? null,
@@ -69,8 +72,8 @@ export async function GET(request: NextRequest) {
         target_position: targetPosition,
         intent: row.intent ?? null,
         domain: row.domain,
-        et,
-        ev,
+        et: hasPosition ? et : null,
+        ev: hasPosition ? ev : null,
       };
     });
 
