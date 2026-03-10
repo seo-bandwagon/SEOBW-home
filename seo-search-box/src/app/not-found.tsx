@@ -1,8 +1,11 @@
 import Link from "next/link";
+import { Navbar } from "@/components/common/Navbar";
 
 export default function NotFound() {
   return (
-    <div className="min-h-screen bg-navy flex items-center justify-center text-center p-10">
+    <div className="min-h-screen bg-navy">
+      <Navbar />
+      <div className="flex items-center justify-center text-center p-10" style={{ minHeight: "calc(100vh - 64px)" }}>
       <div>
         <h1 className="font-heading text-[clamp(6rem,20vw,15rem)] text-pink tracking-[10px] leading-none">
           404
@@ -16,6 +19,7 @@ export default function NotFound() {
         >
           BACK TO HOME
         </Link>
+      </div>
       </div>
     </div>
   );
