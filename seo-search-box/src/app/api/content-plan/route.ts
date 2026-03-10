@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql } from "drizzle-orm";
 import { db, isDatabaseConfigured } from "@/lib/db/client";
-import { auth } from "@/lib/auth";
 
 // CTR curve by position
 function getCTR(position: number | null | undefined): number {
@@ -24,8 +23,11 @@ function getCTR(position: number | null | undefined): number {
 }
 
 export async function GET(request: NextRequest) {
-  const session = await auth();
-  if (!session?.user) {
+  // Auth handled by middleware — check session cookie directly
+  const hasSession =
+    request.cookies.has("__Secure-authjs.session-token") ||
+    request.cookies.has("authjs.session-token");
+  if (!hasSession) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
