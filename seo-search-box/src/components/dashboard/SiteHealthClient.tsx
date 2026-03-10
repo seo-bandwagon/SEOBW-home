@@ -106,18 +106,39 @@ export function SiteHealthClient() {
 
       if (dashRes.status === "fulfilled") {
         const data = dashRes.value;
-        setAnalyses(data.analyses || []);
-        // Extract unique domains
+        // Map API response shape to component interface
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const mapped = (data.analyses || []).map((a: any): Analysis => ({
+          id: a.id,
+          url: a.url,
+          domain: a.domain,
+          score: a.overall_score ?? a.score ?? 0,
+          word_count: a.content?.stats?.words ?? a.word_count ?? 0,
+          reading_ease: a.readability?.fleschEase ?? a.reading_ease ?? 0,
+          core_web_vitals: a.web_vitals ?? a.core_web_vitals ?? null,
+          structured_data: a.structured_data ?? null,
+          text_to_html_ratio: a.text_to_html
+            ? { ratio: a.text_to_html.ratio }
+            : (a.text_to_html_ratio ?? null),
+          mixed_content: a.mixed_content ?? null,
+          created_at: a.created_at,
+        }));
+        setAnalyses(mapped);
         const uniqueDomains = Array.from(
-          new Set(
-            (data.analyses || []).map((a: Analysis) => a.domain)
-          )
+          new Set(mapped.map((a: Analysis) => a.domain))
         ) as string[];
         setDomains(uniqueDomains);
       }
 
       if (statsRes.status === "fulfilled" && statsRes.value) {
-        setStats(statsRes.value);
+        const s = statsRes.value;
+        // Map API stats shape to component interface
+        setStats({
+          totalAnalyses: s.totalAnalyses ?? 0,
+          avgScore: s.averages?.overallScore ?? s.avgScore ?? 0,
+          avgWordCount: s.averages?.wordCount ?? s.avgWordCount ?? 0,
+          domains: (s.topDomains ?? []).map((d: { domain: string }) => d.domain),
+        });
       }
     } catch {
       // handle silently
