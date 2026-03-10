@@ -57,7 +57,7 @@ function SortIcon({ col, sortKey, sortDir }: { col: SortKey; sortKey: SortKey; s
   return <ChevronDown className="h-3 w-3 text-pink-400 inline ml-1" />;
 }
 
-export function ContentPlanClient() {
+export function ContentPlanClient({ domain }: { domain: string }) {
   const [rows, setRows] = useState<KeywordRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -68,7 +68,7 @@ export function ContentPlanClient() {
   const [statusFilter, setStatusFilter] = useState<"all" | "published" | "gap">("all");
 
   useEffect(() => {
-    fetch("/api/content-plan?domain=mastercontrolpress.com")
+    fetch(`/api/content-plan?domain=${encodeURIComponent(domain)}`)
       .then((r) => r.json())
       .then((json) => {
         if (json.error) throw new Error(json.error);
@@ -76,7 +76,7 @@ export function ContentPlanClient() {
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-  }, []);
+  }, [domain]);
 
   const pillars = useMemo(() => {
     const set = new Set(rows.map((r) => r.pillar ?? "Uncategorized"));
